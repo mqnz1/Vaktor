@@ -1,0 +1,20 @@
+# Dependencias e build
+node_modules/
+dist/
+opencode.exe
+
+# Estado local
+.local/
+*.db
+
+# Credenciais — nunca versionar
+.env
+.env.*
+!.env.example
+apis.txt
+*.key
+*.pem
+
+# Logs e temporarios
+*.log
+*.tmp
