@@ -29,6 +29,8 @@ import { sendToApinex } from './apinex.js';
 import { sendToDeepAI } from './deepai.js';
 import { sendToVyceAI } from './vyceai.js';
 import { sendToQronos } from './qronos.js';
+import { sendToZro } from './zro.js';
+import { sendToUnoRouter } from './unorouter.js';
 import { PROVIDER_ENV_KEYS, ownerOf, parseModelRef } from './registry.js';
 import type { ProviderCallOpts } from './http.js';
 import type { ProviderId } from '../thinking/types.js';
@@ -202,6 +204,12 @@ export async function dispatchToProvider(params: DispatchParams): Promise<Router
 
     case 'qronos':
       return sendToQronos(normalized, modelId, maxTokens, apiKey, thinking, temperature, opts);
+
+    case 'zro':
+      return sendToZro(normalized, modelId, maxTokens, apiKey, thinking, temperature, opts);
+
+    case 'unorouter':
+      return sendToUnoRouter(normalized, modelId, maxTokens, apiKey, thinking, temperature, opts);
 
     case 'apinex':
       return sendToApinex(normalized, modelId, maxTokens, apiKey, thinking, temperature, opts);

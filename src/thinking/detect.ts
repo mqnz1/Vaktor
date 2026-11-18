@@ -61,8 +61,10 @@ function providerCarriesParams(id: string, provider: ProviderId): boolean {
       // IDs opacos (qmodel_38max, smodel, ...): scratchpad cobre.
       return false;
     case 'qronos':
-      // Free tier via gateway OpenAI-compatible; scratchpad cobre todos os
-      // modelos sem depender de reasoning_effort por família.
+    case 'zro':
+    case 'unorouter':
+      // Gateways OpenAI-compatible; scratchpad cobre todos os modelos sem
+      // depender de reasoning_effort por família.
       return false;
     case 'apinex':
       // O gateway aceita reasoning_effort em parte dos modelos; scratchpad
@@ -141,6 +143,8 @@ export function listThinkingVariants(modelId: string, provider: ProviderId): Thi
     case 'iteracompute':
     case 'qoder':
     case 'qronos':
+    case 'zro':
+    case 'unorouter':
     case 'apinex':
     case 'deepai':
     case 'vyceai':

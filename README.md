@@ -44,10 +44,15 @@ Vaktor suporta **mais de 20 provedores** com fallback inteligente:
     Claude, GPT, Gemini, Kimi, GLM, Qwen e DeepSeek; catálogo via `/v1/models`
 17. **Qronos AI** - gateway OpenAI-compatible (`QRONOS_API_KEY`) com apenas os
     modelos do free tier: Claude Haiku 5.5, GLM 5.3 Flash e Mercury 3 (`$0`)
+18. **Zro** - inferência privada para agentes (`ZRO_API_KEY`) com DeepSeek V4
+    Flash e V4.1 Flash no uso diário gratuito (1M de contexto, 64K de saída)
+19. **UnoRouter** - gateway OpenAI-compatible (`UNOROUTER_API_KEY`) com modelos
+    `:free` verificados: Gemini 3 Flash, Gemini 3.5 Flash Lite, MiMo V2.6 Flash
+    e MiniMax M3.1 Flash
 
 Também: **Echo Free** (Anthropic · OpenAI · Gemini), **NVIDIA NIM**,
-**OpenCode Zen**, **Token Harbor**, **Itera Compute**, **Qoder**, **APInex**
-e **Qronos AI**.
+**OpenCode Zen**, **Token Harbor**, **Itera Compute**, **Qoder**, **APInex**,
+**Qronos AI**, **Zro** e **UnoRouter**.
 
 **Sem API key necessária! Sem servidor para rodar!**
 
@@ -572,6 +577,8 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 | `QODER_API_KEY`          | -           | PAT Qoder (`pt-...`; vira job token `jt-...`)   |
 | `APINEX_API_KEY`         | -           | Chave APInex (`sk-apx...`, carteira USD)       |
 | `QRONOS_API_KEY`         | -           | Chave Qronos AI (`qr_...`; free tier, custo `$0`) |
+| `ZRO_API_KEY`            | -           | Chave Zro (`sk-...`; Flash com uso diário grátis) |
+| `UNOROUTER_API_KEY`      | -           | Chave UnoRouter (`sk-...`; modelos `:free`)      |
 | `VYCEAI_API_KEY`         | -           | Chave principal Vyce AI                         |
 | `VYCEAI_API_KEYS`        | -           | Pool opcional Vyce AI separado por vírgula      |
 | `DEEPAI_API_KEY`         | -           | Chave DeepAI (texto/resumo e fallback do DeepAI Code) |
@@ -614,7 +621,11 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 > **APInex**: gateway OpenAI-compatible em `https://api.apinex.bond/v1` com 42 modelos e uma carteira USD única. A chave `sk-apx...` vai no `Authorization: Bearer` (ou `x-api-key`). Os IDs `free/...` custam `$0`; os demais debitam saldo e podem responder erro de saldo insuficiente. Preços/contexto vêm do catálogo público `https://apinex.bond/api/public/models`; o Vaktor converte `$/1M` para `$/1k`. Use `free/qwen-3.8-max`, `free/kimi-k3`, `gpt-6.1-sol`, `claude-opus-5.5` etc., ou `apinex::ID`.
 >
 > **Qronos AI**: gateway OpenAI-compatible em `https://api.qronos.me/v1`. A chave `qr_...` vai no `Authorization: Bearer`. No boot, `GET /v1/models` é filtrado para `available: true` + `min_tier: "free"`; só Claude Haiku 5.5, GLM 5.3 Flash e Mercury 3 entram no catálogo, com custo `$0`. A conta free tem 100 requisições e 100k tokens por dia (`GET /v1/me`). Use `qronos::ID` se houver colisão de ID. `QRONOS_DYNAMIC_MODELS=false` mantém a lista estática.
-
+>
+> **Zro**: inferência privada em `https://zro.moonmath.ai/v1` (Chat Completions, Responses e Messages). A chave `sk-...` vai no `Authorization: Bearer`. O plano free cobre DeepSeek V4 Flash e V4.1 Flash com uso diário gratuito; `GET /v1/models` retorna os IDs e os aliases `zro/ID` (o Vaktor remove o alias duplicado). Contexto de 1M e saída de 64K. Use `zro::ID` para fixar o provedor. `ZRO_DYNAMIC_MODELS=false` mantém a lista estática.
+>
+> **UnoRouter**: gateway OpenAI-compatible em `https://api.unorouter.com/v1`. A chave `sk-...` vai no `Authorization: Bearer`. O catálogo só inclui modelos `:free` de texto que responderam `200` na conta: `gemini-3-flash:free`, `gemini-3.5-flash-lite:free`, `mimo-v2.6-flash:free` e `minimax-m3.1-flash:free`, todos com custo `$0`. Modelos que pedem consentimento de provedor retornam `403` e ficam fora; modelos sem provedor no momento retornam `429`. Use `unorouter::ID`. `UNOROUTER_DYNAMIC_MODELS=false` mantém a lista estática.
+>
 > **DeepAI**: a API de texto usa `https://api.deepai.org/api/{model}` com `api-key` e corpo form-urlencoded (`text=<prompt>`); `data.output` vira o texto do Vaktor (com follow de `output_url`). Modelos legados: `deepai/text-generator` e `deepai/summarization`.
 >
 > **DeepAI Code**: 18 modelos em `https://api.deepai.org/deepai_code` (OpenAI-compatible) — `chat/completions` e `responses` (GPT-6 Astra). O `POST` leva `api-key` e os cabeçalhos `X-DeepAI-Code-Theos: 4`, `X-DeepAI-Code-Instance` e `X-DeepAI-Code-Machine` (hash do UUID da máquina). Os 9 modelos `0 Theos` são grátis: `glm-5.3-flash`, `deepseek-v4.1-flash`, `mimo-2.6-flash`, `solar-mini-4`, `gpt-6-luna`, `mimo-2.6-pro`, `crouton-alpha`, `glyph-cluster` e `deepai-cyber`; os pagos custam de 3 a 50 Theos/req (`glm-5.3`, `kimi-k3`, `muse-spark-1.3`, `gpt-6.1-sol`, `gemini-4-argon`, `claude-opus-5-5`, `muse-wonder`, `claude-fable-5-1`, `gpt-6-astra`). A chave da conta precisa de login Google/Apple (o app DeepAI Code faz o fluxo); sem isso o servidor responde `403 social_login_required`. Use `DEEPAI_CODE_API_KEY` (fallback `DEEPAI_API_KEY`); se nenhuma estiver definida, o Vaktor lê a conta salva pelo app em `~/.deepai-code/userdata/secrets/deepai-account.bin` (ou no caminho de `DEEPAI_CODE_ACCOUNT_FILE`). Selecione `deepai::ID`. Custo em Theos, exibido como `$0` no Vaktor.
@@ -721,9 +732,11 @@ src/
 │   ├── qoder.ts           # Qoder + PAT→job token e 15 modelos nativos
 │   ├── apinex.ts          # APInex + 42 modelos e carteira USD
 │   ├── qronos.ts          # Qronos AI + free tier (Claude/GLM/Mercury)
+│   ├── zro.ts             # Zro + DeepSeek Flash com uso diário grátis
+│   ├── unorouter.ts       # UnoRouter + modelos :free verificados
 │   ├── vyceai.ts          # Vyce AI + pool de chaves via ambiente
 │   ├── deepai.ts          # DeepAI texto/resumo + DeepAI Code (18 modelos)
-│   └── smoke.ts           # testes offline (credencial, retry, dono, Gemini, Notion, Notion Web, DeepAI Code, Qronos, pulso)
+│   └── smoke.ts           # testes offline (credencial, retry, dono, Gemini, Notion, Notion Web, DeepAI Code, Qronos, Zro, UnoRouter, pulso)
 ├── agent/
 │   ├── loop.ts            # Loop do agente (tools → resultados → verificação → Best-of-N)
 │   ├── protocol.ts        # Parser do protocolo <tool_call>

@@ -77,7 +77,7 @@ export interface ModelInfo {
   id: string;
   name: string;
   provider: 'puter' | 'agentrouter' | 'anthropic' | 'openai' | 'google' | 'requesty' | 'kilo' | 'fta' | 'proxygatellm'
-| 'echo' | 'nvidia' | 'opencode' | 'harbor' | 'notion' | 'notion_web' | 'iteracompute' | 'qoder' | 'apinex' | 'deepai' | 'vyceai' | 'qronos';
+| 'echo' | 'nvidia' | 'opencode' | 'harbor' | 'notion' | 'notion_web' | 'iteracompute' | 'qoder' | 'apinex' | 'deepai' | 'vyceai' | 'qronos' | 'zro' | 'unorouter';
   costPer1kTokensInput: number;   // USD
   costPer1kTokensOutput: number;  // USD
   contextWindow: number;

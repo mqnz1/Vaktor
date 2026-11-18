@@ -30,6 +30,8 @@ import { APINEX_MODELS } from './apinex.js';
 import { DEEPAI_MODELS } from './deepai.js';
 import { VYCEAI_MODELS } from './vyceai.js';
 import { QRONOS_MODELS } from './qronos.js';
+import { ZRO_MODELS } from './zro.js';
+import { UNOROUTER_MODELS } from './unorouter.js';
 
 /** Campos usados pelo roteamento, pelo menu e pelo cálculo de custo. */
 export interface CatalogModel {
@@ -66,6 +68,8 @@ export const PROVIDER_CATALOGS: Record<ProviderId, readonly CatalogModel[]> = {
   deepai: DEEPAI_MODELS,
   vyceai: VYCEAI_MODELS,
   qronos: QRONOS_MODELS,
+  zro: ZRO_MODELS,
+  unorouter: UNOROUTER_MODELS,
 };
 
 /**
@@ -83,10 +87,12 @@ export const PROVIDER_ORDER: readonly ProviderId[] = [
   'echo',
   'nvidia',
   'opencode',
+  'zro',
   'harbor',
   'iteracompute',
   'qoder',
   'qronos',
+  'unorouter',
   'apinex',
   'requesty',
   'kilo',
@@ -118,6 +124,8 @@ export const PROVIDER_ENV_KEYS: Record<ProviderId, string> = {
   iteracompute: 'ITERACOMPUTE',
   qoder: 'QODER',
   qronos: 'QRONOS',
+  zro: 'ZRO',
+  unorouter: 'UNOROUTER',
   apinex: 'APINEX',
   deepai: 'DEEPAI',
   vyceai: 'VYCEAI',
@@ -144,6 +152,8 @@ export const PROVIDER_LABELS = {
   iteracompute: 'Itera Compute',
   qoder: 'Qoder',
   qronos: 'Qronos AI',
+  zro: 'Zro',
+  unorouter: 'UnoRouter',
   apinex: 'APInex',
   deepai: 'DeepAI',
   vyceai: 'Vyce AI',

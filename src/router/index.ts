@@ -18,6 +18,8 @@ import { getCached, setCache, isTrivialPrompt } from './cache.js';
 import { initPuter, loadPuterCatalog, puterDynamicEnabled } from '../providers/puter.js';
 import { loadNumesCatalog, numesDynamicEnabled } from '../providers/numes.js';
 import { loadQronosCatalog, qronosDynamicEnabled } from '../providers/qronos.js';
+import { loadZroCatalog, zroDynamicEnabled } from '../providers/zro.js';
+import { loadUnoRouterCatalog, unorouterDynamicEnabled } from '../providers/unorouter.js';
 import {
   loadNightRouterCatalog,
   nightRouterDynamicEnabled,
@@ -95,6 +97,8 @@ const FALLBACK_CHAIN = [
 const PREFERRED_FREE_PROVIDERS = new Set<ProviderId>([
   'opencode',
   'qronos',
+  'zro',
+  'unorouter',
   'apinex',
   'requesty',
   'kilo',
@@ -237,6 +241,26 @@ export class AIRouter {
       if (count === 0 && qronosDynamicEnabled()) {
         this.warnings.push(
           'Qronos AI: catálogo remoto indisponível; usando os modelos free conhecidos.',
+        );
+      }
+    }
+
+    const zroApiKey = process.env['ZRO_API_KEY']?.trim() ?? '';
+    if (zroApiKey) {
+      const count = await loadZroCatalog(zroApiKey);
+      if (count === 0 && zroDynamicEnabled()) {
+        this.warnings.push(
+          'Zro: catálogo remoto indisponível; usando os modelos Flash conhecidos.',
+        );
+      }
+    }
+
+    const unorouterApiKey = process.env['UNOROUTER_API_KEY']?.trim() ?? '';
+    if (unorouterApiKey) {
+      const count = await loadUnoRouterCatalog(unorouterApiKey);
+      if (count === 0 && unorouterDynamicEnabled()) {
+        this.warnings.push(
+          'UnoRouter: catálogo remoto indisponível; usando os modelos free verificados.',
         );
       }
     }

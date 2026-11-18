@@ -61,6 +61,18 @@ import {
   sendToQronos,
 } from './qronos.js';
 import {
+  ZRO_MODELS,
+  getZroModelById,
+  mapZroCatalog,
+  sendToZro,
+} from './zro.js';
+import {
+  UNOROUTER_MODELS,
+  getUnoRouterModelById,
+  mapUnoRouterCatalog,
+  sendToUnoRouter,
+} from './unorouter.js';
+import {
   APINEX_MODELS,
   getApinexModelById,
   sendToApinex,
@@ -449,7 +461,7 @@ async function main(): Promise<void> {
   );
   check(
     'todo modelo tem exatamente um dono',
-    (['puter', 'echo', 'opencode', 'nvidia', 'harbor', 'iteracompute', 'qoder', 'qronos', 'apinex', 'deepai', 'vyceai', 'openrouter', 'numes', 'nightrouter', 'proxygatellm', 'gemini', 'notion', 'notion_web'] as const)
+    (['puter', 'echo', 'opencode', 'nvidia', 'harbor', 'iteracompute', 'qoder', 'qronos', 'zro', 'unorouter', 'apinex', 'deepai', 'vyceai', 'openrouter', 'numes', 'nightrouter', 'proxygatellm', 'gemini', 'notion', 'notion_web'] as const)
       .every(provider => modelsOwnedBy(provider).every(model => ownerOf(model.id) === provider)),
   );
   check('modelo desconhecido cai no Puter', ownerOf('modelo-inexistente-xyz') === 'puter');
@@ -2296,6 +2308,187 @@ async function main(): Promise<void> {
       caught = error instanceof Error ? error.message : String(error);
     }
     check('Qronos bloqueia modelo fora do free tier', caught.includes('free tier'));
+  }
+
+  check('Zro usa ZRO_API_KEY', PROVIDER_ENV_KEYS.zro === 'ZRO');
+  check('rotulo Zro', PROVIDER_LABELS.zro === 'Zro');
+  check('UnoRouter usa UNOROUTER_API_KEY', PROVIDER_ENV_KEYS.unorouter === 'UNOROUTER');
+  check('rotulo UnoRouter', PROVIDER_LABELS.unorouter === 'UnoRouter');
+
+  {
+    const mapped = mapZroCatalog([
+      { id: 'deepseek-v4.1-flash', mode: 'chat', max_input_tokens: 1000000 },
+      { id: 'zro/deepseek-v4.1-flash', mode: 'chat', max_input_tokens: 1000000 },
+      { id: 'modelo-imagem', mode: 'image', max_input_tokens: 1000 },
+      { id: 'deepseek-v4-flash-0731', mode: 'chat', max_input_tokens: 1048576 },
+    ]);
+    check(
+      'Zro deduplica aliases zro/ e ignora modo não-chat',
+      mapped.length === 2 &&
+        mapped.some(model => model.id === 'deepseek-v4.1-flash') &&
+        mapped.some(model => model.id === 'deepseek-v4-flash-0731'),
+    );
+    check(
+      'Zro free usa custo zero',
+      mapped.every(model => model.costPer1kTokensInput === 0 && model.costPer1kTokensOutput === 0),
+    );
+    check(
+      'Zro catálogo estático tem DeepSeek V4.1 Flash',
+      ZRO_MODELS.some(model => model.id === 'deepseek-v4.1-flash') &&
+        getZroModelById('deepseek-v4.1-flash') !== undefined,
+    );
+  }
+
+  {
+    const originalFetch = globalThis.fetch;
+    let capturedUrl = '';
+    let capturedHeaders: Record<string, string> = {};
+    let capturedBody: Record<string, unknown> = {};
+    globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+      capturedUrl = String(input);
+      capturedHeaders = (init?.headers ?? {}) as Record<string, string>;
+      capturedBody = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: 'zro ok' } }],
+        usage: { prompt_tokens: 4, completion_tokens: 2 },
+      }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const res = await sendToZro(
+        [{ role: 'user', content: 'oi', timestamp: 1 }],
+        'deepseek-v4.1-flash',
+        256,
+        'zro-test',
+      );
+      check(
+        'Zro usa /chat/completions',
+        capturedUrl === 'https://zro.moonmath.ai/v1/chat/completions',
+      );
+      check(
+        'Zro envia Bearer e modelo correto',
+        capturedHeaders['Authorization'] === 'Bearer zro-test' &&
+          capturedBody['model'] === 'deepseek-v4.1-flash',
+      );
+      check('Zro converte resposta OpenAI', res.text === 'zro ok');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    let caught = '';
+    try {
+      await sendToZro(
+        [{ role: 'user', content: 'oi', timestamp: 1 }],
+        'modelo-inexistente',
+        128,
+        'zro-test',
+      );
+    } catch (error) {
+      caught = error instanceof Error ? error.message : String(error);
+    }
+    check('Zro bloqueia modelo fora do catálogo', caught.includes('catálogo'));
+  }
+
+  {
+    const mapped = mapUnoRouterCatalog([
+      { id: 'gemini-3-flash:free', context_length: 1000000 },
+      { id: 'deepseek-v4.1-flash:free', context_length: 1000000 },
+      { id: 'gpt-4o', context_length: 128000 },
+      { id: 'mimo-v2.6-flash:free', context_length: 1000000 },
+    ]);
+    check(
+      'UnoRouter mantém apenas free verificados',
+      mapped.length === 2 &&
+        mapped.every(model => model.id.endsWith(':free')) &&
+        mapped.every(model => model.id !== 'deepseek-v4.1-flash:free'),
+    );
+    check(
+      'UnoRouter free usa custo zero',
+      mapped.every(model => model.costPer1kTokensInput === 0 && model.costPer1kTokensOutput === 0),
+    );
+    check(
+      'UnoRouter catálogo estático tem Gemini 3 Flash',
+      UNOROUTER_MODELS.some(model => model.id === 'gemini-3-flash:free') &&
+        getUnoRouterModelById('minimax-m3.1-flash:free') !== undefined,
+    );
+  }
+
+  {
+    const originalFetch = globalThis.fetch;
+    let capturedUrl = '';
+    let capturedHeaders: Record<string, string> = {};
+    let capturedBody: Record<string, unknown> = {};
+    globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+      capturedUrl = String(input);
+      capturedHeaders = (init?.headers ?? {}) as Record<string, string>;
+      capturedBody = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: 'uno ok' } }],
+        usage: { prompt_tokens: 4, completion_tokens: 2 },
+      }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const res = await sendToUnoRouter(
+        [{ role: 'user', content: 'oi', timestamp: 1 }],
+        'gemini-3-flash:free',
+        256,
+        'uno-test',
+      );
+      check(
+        'UnoRouter usa /chat/completions',
+        capturedUrl === 'https://api.unorouter.com/v1/chat/completions',
+      );
+      check(
+        'UnoRouter envia Bearer e modelo com :free',
+        capturedHeaders['Authorization'] === 'Bearer uno-test' &&
+          capturedBody['model'] === 'gemini-3-flash:free',
+      );
+      check('UnoRouter converte resposta OpenAI', res.text === 'uno ok');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(JSON.stringify({
+      error: { message: 'needs your consent for these providers' },
+    }), { status: 403 })) as typeof fetch;
+    try {
+      let caught = '';
+      try {
+        await sendToUnoRouter(
+          [{ role: 'user', content: 'oi', timestamp: 1 }],
+          'mimo-v2.6-flash:free',
+          128,
+          'uno-test',
+        );
+      } catch (error) {
+        caught = error instanceof Error ? error.message : String(error);
+      }
+      check(
+        'UnoRouter explica consentimento 403',
+        caught.includes('consentimento') && caught.includes('unorouter.com/consents'),
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    let caught = '';
+    try {
+      await sendToUnoRouter(
+        [{ role: 'user', content: 'oi', timestamp: 1 }],
+        'modelo-pago',
+        128,
+        'uno-test',
+      );
+    } catch (error) {
+      caught = error instanceof Error ? error.message : String(error);
+    }
+    check('UnoRouter bloqueia modelo fora do free verificado', caught.includes('free tier'));
   }
 
   if (failures > 0) {

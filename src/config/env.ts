@@ -239,6 +239,8 @@ export function loadConfig(): AppConfig {
     getEnv('ITERACOMPUTE_API_KEY') ||
     getEnv('QODER_API_KEY') ||
     getEnv('QRONOS_API_KEY') ||
+    getEnv('ZRO_API_KEY') ||
+    getEnv('UNOROUTER_API_KEY') ||
     getEnv('APINEX_API_KEY') ||
     getEnv('DEEPAI_CODE_API_KEY') ||
     getEnv('DEEPAI_API_KEY') ||

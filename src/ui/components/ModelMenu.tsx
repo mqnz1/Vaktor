@@ -19,11 +19,13 @@ import { ITERACOMPUTE_MODELS } from '../../providers/iteracompute.js';
 import { QODER_MODELS } from '../../providers/qoder.js';
 import { APINEX_MODELS } from '../../providers/apinex.js';
 import { QRONOS_MODELS } from '../../providers/qronos.js';
+import { ZRO_MODELS } from '../../providers/zro.js';
+import { UNOROUTER_MODELS } from '../../providers/unorouter.js';
 import { DEEPAI_MODELS } from '../../providers/deepai.js';
 import { PROVIDER_CATALOGS, PROVIDER_LABELS, qualifyModelId } from '../../providers/registry.js';
 
 type View = 'models' | 'providers';
-type Filter = 'all' | 'puter' | 'agentrouter' | 'openrouter' | 'requesty' | 'kilo' | 'fta' | 'gemini' | 'notion' | 'notion_web' | 'iteracompute' | 'qoder' | 'qronos' | 'apinex' | 'deepai' | 'proxygatellm' | 'echo' | 'nvidia' | 'opencode' | 'harbor';
+type Filter = 'all' | 'puter' | 'agentrouter' | 'openrouter' | 'requesty' | 'kilo' | 'fta' | 'gemini' | 'notion' | 'notion_web' | 'iteracompute' | 'qoder' | 'qronos' | 'zro' | 'unorouter' | 'apinex' | 'deepai' | 'proxygatellm' | 'echo' | 'nvidia' | 'opencode' | 'harbor';
 type ProviderFilter = Exclude<Filter, 'all'>;
 const VISIBLE = 18;
 
@@ -74,6 +76,8 @@ const PROVIDERS: Array<{
   { id: 'iteracompute', name: 'Itera Compute', envKey: 'ITERACOMPUTE_API_KEY', note: 'Qwen3.8 free (30M/mês)' },
   { id: 'qoder', name: 'Qoder', envKey: 'QODER_API_KEY', note: '15 modelos (PAT)' },
   { id: 'qronos', name: 'Qronos AI', envKey: 'QRONOS_API_KEY', note: 'free tier · custo zero' },
+  { id: 'zro', name: 'Zro', envKey: 'ZRO_API_KEY', note: 'Flash free diário' },
+  { id: 'unorouter', name: 'UnoRouter', envKey: 'UNOROUTER_API_KEY', note: 'modelos :free verificados' },
   { id: 'apinex', name: 'APInex', envKey: 'APINEX_API_KEY', note: '42 modelos · carteira USD' },
   { id: 'deepai', name: 'DeepAI', envKey: 'DEEPAI_CODE_API_KEY', note: '18 modelos Code + texto/resumo' },
 ];
@@ -164,6 +168,12 @@ function buildModelsList(filter: Filter): MenuEntry[] {
   }
   if (filter === 'all' || filter === 'qronos') {
     sections.push({ label: '─ Qronos AI · free ─', provider: 'qronos', models: QRONOS_MODELS });
+  }
+  if (filter === 'all' || filter === 'zro') {
+    sections.push({ label: '─ Zro · free diário ─', provider: 'zro', models: ZRO_MODELS });
+  }
+  if (filter === 'all' || filter === 'unorouter') {
+    sections.push({ label: '─ UnoRouter · free ─', provider: 'unorouter', models: UNOROUTER_MODELS });
   }
   if (filter === 'all' || filter === 'apinex') {
     sections.push({ label: '─ APInex ─', provider: 'apinex', models: APINEX_MODELS });

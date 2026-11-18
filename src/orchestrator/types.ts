@@ -106,26 +106,33 @@ export const ROLE_FALLBACK_CHAINS: Record<OrchestratorRole, readonly string[]> =
   planner: [
     qualifyModelId('opencode', 'deepseek-v4.1-flash'),
     qualifyModelId('gemini', 'gemini-2.5-flash'),
+    qualifyModelId('zro', 'deepseek-v4.1-flash'),
+    qualifyModelId('unorouter', 'gemini-3-flash:free'),
     qualifyModelId('nvidia', 'z-ai/glm-5.3'),
   ],
   scout: [
     qualifyModelId('opencode', 'deepseek-v4.1-flash'),
     qualifyModelId('gemini', 'gemini-2.5-flash'),
+    qualifyModelId('unorouter', 'gemini-3.5-flash-lite:free'),
     qualifyModelId('opencode', 'gemini-3.5-flash-lite'),
   ],
   builder_backend: [
     qualifyModelId('nvidia', 'nvidia/nemotron-3.5-lightning-30b-a3b'),
     qualifyModelId('opencode', 'glm-5.3-flash'),
+    qualifyModelId('zro', 'deepseek-v4.1-flash'),
     qualifyModelId('gemini', 'gemini-2.5-flash'),
   ],
   builder_frontend: [
     qualifyModelId('opencode', 'deepseek-v4.1-flash'),
     qualifyModelId('nvidia', 'nvidia/nemotron-3.5-lightning-30b-a3b'),
+    qualifyModelId('unorouter', 'mimo-v2.6-flash:free'),
     qualifyModelId('gemini', 'gemini-2.5-pro'),
   ],
   fixer: [
     qualifyModelId('opencode', 'deepseek-v4.1-flash'),
     qualifyModelId('nvidia', 'nvidia/nemotron-3.5-lightning-30b-a3b'),
+    qualifyModelId('zro', 'deepseek-v4.1-flash'),
+    qualifyModelId('unorouter', 'minimax-m3.1-flash:free'),
     qualifyModelId('gemini', 'gemini-2.5-flash'),
   ],
 };

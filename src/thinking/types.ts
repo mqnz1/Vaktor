@@ -4,7 +4,7 @@ export type ThinkingStrategy = 'none' | 'native' | 'scratchpad' | 'two-pass';
 export type Complexity = 'trivial' | 'normal' | 'hard';
 // Esforço aceito pelos provedores. 'auto' = derivado da complexidade.
 export type ThinkingEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
-export type ProviderId = 'puter' | 'agentrouter' | 'openrouter' | 'numes' | 'nightrouter' | 'requesty' | 'kilo' | 'fta' | 'proxygatellm' | 'echo' | 'nvidia' | 'opencode' | 'harbor' | 'gemini' | 'notion' | 'notion_web' | 'iteracompute' | 'qoder' | 'apinex' | 'deepai' | 'vyceai' | 'qronos';
+export type ProviderId = 'puter' | 'agentrouter' | 'openrouter' | 'numes' | 'nightrouter' | 'requesty' | 'kilo' | 'fta' | 'proxygatellm' | 'echo' | 'nvidia' | 'opencode' | 'harbor' | 'gemini' | 'notion' | 'notion_web' | 'iteracompute' | 'qoder' | 'apinex' | 'deepai' | 'vyceai' | 'qronos' | 'zro' | 'unorouter';
 
 export interface ThinkingConfig {
   enabled: boolean;
