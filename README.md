@@ -44,11 +44,13 @@ Vaktor suporta **mais de 20 provedores** com fallback inteligente:
     Claude, GPT, Gemini, Kimi, GLM, Qwen e DeepSeek; catálogo via `/v1/models`
 17. **Qronos AI** - gateway OpenAI-compatible (`QRONOS_API_KEY`) com apenas os
     modelos do free tier: Claude Haiku 5.5, GLM 5.3 Flash e Mercury 3 (`$0`)
-18. **Zro** - inferência privada para agentes (`ZRO_API_KEY`) com DeepSeek V4
-    Flash e V4.1 Flash no uso diário gratuito (1M de contexto, 64K de saída)
-19. **UnoRouter** - gateway OpenAI-compatible (`UNOROUTER_API_KEY`) com modelos
-    `:free` verificados: Gemini 3 Flash, Gemini 3.5 Flash Lite, MiMo V2.6 Flash
-    e MiniMax M3.1 Flash
+18. **Zro** - inferência privada para agentes (`ZRO_API_KEY`) com os modelos
+    oficiais DeepSeek V4.1 Flash, GLM 5.3, Dolly 2 Security e Abyss 1 (1M de
+    contexto; apenas o DeepSeek está liberado na chave atual)
+19. **UnoRouter** - gateway OpenAI-compatible (`UNOROUTER_API_KEY`) com todos os
+    LLMs `:free` de texto do `/v1/models`; imagem, áudio, embedding, aihorde e
+    typesafe-decisions ficam fora. Fallback verificado: Gemini 3.5 Flash Lite e
+    K ExaOne 2.5
 
 Também: **Echo Free** (Anthropic · OpenAI · Gemini), **NVIDIA NIM**,
 **OpenCode Zen**, **Token Harbor**, **Itera Compute**, **Qoder**, **APInex**,
@@ -577,8 +579,8 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 | `QODER_API_KEY`          | -           | PAT Qoder (`pt-...`; vira job token `jt-...`)   |
 | `APINEX_API_KEY`         | -           | Chave APInex (`sk-apx...`, carteira USD)       |
 | `QRONOS_API_KEY`         | -           | Chave Qronos AI (`qr_...`; free tier, custo `$0`) |
-| `ZRO_API_KEY`            | -           | Chave Zro (`sk-...`; Flash com uso diário grátis) |
-| `UNOROUTER_API_KEY`      | -           | Chave UnoRouter (`sk-...`; modelos `:free`)      |
+| `ZRO_API_KEY`            | -           | Chave Zro (`sk-...`; DeepSeek/GLM/Dolly/Abyss)  |
+| `UNOROUTER_API_KEY`      | -           | Chave UnoRouter (`sk-...`; LLMs `:free` de texto)|
 | `VYCEAI_API_KEY`         | -           | Chave principal Vyce AI                         |
 | `VYCEAI_API_KEYS`        | -           | Pool opcional Vyce AI separado por vírgula      |
 | `DEEPAI_API_KEY`         | -           | Chave DeepAI (texto/resumo e fallback do DeepAI Code) |
@@ -622,9 +624,9 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 >
 > **Qronos AI**: gateway OpenAI-compatible em `https://api.qronos.me/v1`. A chave `qr_...` vai no `Authorization: Bearer`. No boot, `GET /v1/models` é filtrado para `available: true` + `min_tier: "free"`; só Claude Haiku 5.5, GLM 5.3 Flash e Mercury 3 entram no catálogo, com custo `$0`. A conta free tem 100 requisições e 100k tokens por dia (`GET /v1/me`). Use `qronos::ID` se houver colisão de ID. `QRONOS_DYNAMIC_MODELS=false` mantém a lista estática.
 >
-> **Zro**: inferência privada em `https://zro.moonmath.ai/v1` (Chat Completions, Responses e Messages). A chave `sk-...` vai no `Authorization: Bearer`. O plano free cobre DeepSeek V4 Flash e V4.1 Flash com uso diário gratuito; `GET /v1/models` retorna os IDs e os aliases `zro/ID` (o Vaktor remove o alias duplicado). Contexto de 1M e saída de 64K. Use `zro::ID` para fixar o provedor. `ZRO_DYNAMIC_MODELS=false` mantém a lista estática.
+> **Zro**: inferência privada em `https://zro.moonmath.ai/v1` (Chat Completions, Responses e Messages). A chave `sk-...` vai no `Authorization: Bearer`. O catálogo estático tem os quatro modelos oficiais - `deepseek-v4.1-flash`, `glm-5.3`, `dolly2-security` e `abyss1` - com preços reais por 1M convertidos para `$/1k` e contexto de 1M. Na chave atual, só o DeepSeek responde `200`; GLM, Dolly e Abyss retornam `403` e ficam como `unavailable`. O loader dinâmico faz **união** com `/v1/models` (não substitui a lista) e remove aliases `zro/ID`. Use `zro::ID` para fixar o provedor. `ZRO_DYNAMIC_MODELS=false` mantém a lista estática.
 >
-> **UnoRouter**: gateway OpenAI-compatible em `https://api.unorouter.com/v1`. A chave `sk-...` vai no `Authorization: Bearer`. O catálogo só inclui modelos `:free` de texto que responderam `200` na conta: `gemini-3-flash:free`, `gemini-3.5-flash-lite:free`, `mimo-v2.6-flash:free` e `minimax-m3.1-flash:free`, todos com custo `$0`. Modelos que pedem consentimento de provedor retornam `403` e ficam fora; modelos sem provedor no momento retornam `429`. Use `unorouter::ID`. `UNOROUTER_DYNAMIC_MODELS=false` mantém a lista estática.
+> **UnoRouter**: gateway OpenAI-compatible em `https://api.unorouter.com/v1`. A chave `sk-...` vai no `Authorization: Bearer`. O loader dinâmico inclui **todos** os LLMs `:free` de texto do `/v1/models` (endpoints `openai`, `anthropic`, `gemini` e `openai-response`), todos com custo `$0`. Imagem, áudio (`whisper*`), embedding, `aihorde` e `typesafe-decisions` são ignorados. Modelos que pedem consentimento de provedor retornam `403` e aparecem como `limited`; autorize em `unorouter.com/consents`. O fallback do orquestrador usa apenas `gemini-3.5-flash-lite:free` e `k-exaone-2.5:free`, verificados com `200`. Use `unorouter::ID`. `UNOROUTER_DYNAMIC_MODELS=false` mantém a lista estática.
 >
 > **DeepAI**: a API de texto usa `https://api.deepai.org/api/{model}` com `api-key` e corpo form-urlencoded (`text=<prompt>`); `data.output` vira o texto do Vaktor (com follow de `output_url`). Modelos legados: `deepai/text-generator` e `deepai/summarization`.
 >
@@ -732,8 +734,8 @@ src/
 │   ├── qoder.ts           # Qoder + PAT→job token e 15 modelos nativos
 │   ├── apinex.ts          # APInex + 42 modelos e carteira USD
 │   ├── qronos.ts          # Qronos AI + free tier (Claude/GLM/Mercury)
-│   ├── zro.ts             # Zro + DeepSeek Flash com uso diário grátis
-│   ├── unorouter.ts       # UnoRouter + modelos :free verificados
+│   ├── zro.ts             # Zro + 4 modelos oficiais (DeepSeek liberado)
+│   ├── unorouter.ts       # UnoRouter + todos os LLMs :free de texto
 │   ├── vyceai.ts          # Vyce AI + pool de chaves via ambiente
 │   ├── deepai.ts          # DeepAI texto/resumo + DeepAI Code (18 modelos)
 │   └── smoke.ts           # testes offline (credencial, retry, dono, Gemini, Notion, Notion Web, DeepAI Code, Qronos, Zro, UnoRouter, pulso)

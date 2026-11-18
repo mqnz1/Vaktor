@@ -62,13 +62,17 @@ import {
 } from './qronos.js';
 import {
   ZRO_MODELS,
+  applyZroCatalog,
   getZroModelById,
   mapZroCatalog,
   sendToZro,
 } from './zro.js';
 import {
+  UNOROUTER_CONSENT_REQUIRED,
   UNOROUTER_MODELS,
+  UNOROUTER_VERIFIED_FALLBACK,
   getUnoRouterModelById,
+  isUnoRouterTextModel,
   mapUnoRouterCatalog,
   sendToUnoRouter,
 } from './unorouter.js';
@@ -2320,22 +2324,45 @@ async function main(): Promise<void> {
       { id: 'deepseek-v4.1-flash', mode: 'chat', max_input_tokens: 1000000 },
       { id: 'zro/deepseek-v4.1-flash', mode: 'chat', max_input_tokens: 1000000 },
       { id: 'modelo-imagem', mode: 'image', max_input_tokens: 1000 },
-      { id: 'deepseek-v4-flash-0731', mode: 'chat', max_input_tokens: 1048576 },
+      { id: 'glm-5.3', mode: 'chat', max_input_tokens: 1000000 },
+      { id: 'novo-modelo', mode: 'chat', max_input_tokens: 2000000 },
     ]);
     check(
       'Zro deduplica aliases zro/ e ignora modo não-chat',
       mapped.length === 2 &&
         mapped.some(model => model.id === 'deepseek-v4.1-flash') &&
-        mapped.some(model => model.id === 'deepseek-v4-flash-0731'),
+        mapped.some(model => model.id === 'glm-5.3') &&
+        !mapped.some(model => model.id === 'novo-modelo'),
     );
     check(
-      'Zro free usa custo zero',
-      mapped.every(model => model.costPer1kTokensInput === 0 && model.costPer1kTokensOutput === 0),
+      'Zro usa custos oficiais por 1k',
+      getZroModelById('deepseek-v4.1-flash')?.costPer1kTokensInput === 0.0003 &&
+        getZroModelById('deepseek-v4.1-flash')?.costPer1kTokensOutput === 0.0011 &&
+        getZroModelById('glm-5.3')?.costPer1kTokensInput === 0.0014 &&
+        getZroModelById('glm-5.3')?.costPer1kTokensOutput === 0.0042,
     );
     check(
-      'Zro catálogo estático tem DeepSeek V4.1 Flash',
-      ZRO_MODELS.some(model => model.id === 'deepseek-v4.1-flash') &&
-        getZroModelById('deepseek-v4.1-flash') !== undefined,
+      'Zro catálogo estático tem os 4 modelos oficiais',
+      ZRO_MODELS.length === 4 &&
+        ZRO_MODELS.some(model => model.id === 'deepseek-v4.1-flash') &&
+        ZRO_MODELS.some(model => model.id === 'glm-5.3') &&
+        ZRO_MODELS.some(model => model.id === 'dolly2-security') &&
+        ZRO_MODELS.some(model => model.id === 'abyss1'),
+    );
+    check(
+      'Zro marca modelos sem acesso como unavailable',
+      getZroModelById('deepseek-v4.1-flash')?.status === 'available' &&
+        getZroModelById('glm-5.3')?.status === 'unavailable' &&
+        getZroModelById('dolly2-security')?.status === 'unavailable' &&
+        getZroModelById('abyss1')?.status === 'unavailable',
+    );
+    const merged = applyZroCatalog([
+      { id: 'deepseek-v4.1-flash', mode: 'chat', max_input_tokens: 1000000 },
+    ]);
+    check(
+      'Zro loader dinâmico faz união sem remover modelos oficiais',
+      merged === 4 && ZRO_MODELS.length === 4 &&
+        getZroModelById('glm-5.3') !== undefined,
     );
   }
 
@@ -2391,26 +2418,65 @@ async function main(): Promise<void> {
   }
 
   {
+    let caught = '';
+    try {
+      await sendToZro(
+        [{ role: 'user', content: 'oi', timestamp: 1 }],
+        'glm-5.3',
+        128,
+        'zro-test',
+      );
+    } catch (error) {
+      caught = error instanceof Error ? error.message : String(error);
+    }
+    check(
+      'Zro explica modelo sem acesso (403)',
+      caught.includes('não está disponível') && caught.includes('deepseek-v4.1-flash'),
+    );
+  }
+
+  {
     const mapped = mapUnoRouterCatalog([
-      { id: 'gemini-3-flash:free', context_length: 1000000 },
-      { id: 'deepseek-v4.1-flash:free', context_length: 1000000 },
-      { id: 'gpt-4o', context_length: 128000 },
-      { id: 'mimo-v2.6-flash:free', context_length: 1000000 },
+      { id: 'gemini-3.5-flash-lite:free', context_length: 1000000, supported_endpoint_types: ['openai', 'gemini'] },
+      { id: 'deepseek-v4.1-flash:free', context_length: 1000000, supported_endpoint_types: ['openai'] },
+      { id: 'k-exaone-2.5:free', context_length: 131072, supported_endpoint_types: ['openai'] },
+      { id: 'texto-desconhecido:free', context_length: 64000, supported_endpoint_types: ['openai'] },
+      { id: 'gpt-4o', context_length: 128000, supported_endpoint_types: ['openai'] },
+      { id: 'imagem:free', context_length: 1000, supported_endpoint_types: ['openai', 'image-generation'] },
+      { id: 'embedding:free', context_length: 1000, supported_endpoint_types: ['openai', 'embedding'] },
+      { id: 'horde:free', context_length: 1000, supported_endpoint_types: ['aihorde'] },
+      { id: 'decisao:free', context_length: 1000, supported_endpoint_types: ['typesafe-decisions'] },
+      { id: 'whisper-large:free', context_length: 1000, supported_endpoint_types: ['openai'] },
     ]);
     check(
-      'UnoRouter mantém apenas free verificados',
-      mapped.length === 2 &&
+      'UnoRouter inclui todos os LLMs free de texto',
+      mapped.length === 4 &&
         mapped.every(model => model.id.endsWith(':free')) &&
-        mapped.every(model => model.id !== 'deepseek-v4.1-flash:free'),
+        mapped.some(model => model.id === 'texto-desconhecido:free'),
+    );
+    check(
+      'UnoRouter ignora imagem, áudio, embedding e aihorde',
+      !mapped.some(model => /imagem|embedding|horde|decisao|whisper/.test(model.id)),
+    );
+    check(
+      'UnoRouter marca consentimento como limited',
+      mapped.find(model => model.id === 'deepseek-v4.1-flash:free')?.status === 'limited' &&
+        UNOROUTER_CONSENT_REQUIRED.has('deepseek-v4.1-flash:free'),
     );
     check(
       'UnoRouter free usa custo zero',
       mapped.every(model => model.costPer1kTokensInput === 0 && model.costPer1kTokensOutput === 0),
     );
     check(
-      'UnoRouter catálogo estático tem Gemini 3 Flash',
-      UNOROUTER_MODELS.some(model => model.id === 'gemini-3-flash:free') &&
-        getUnoRouterModelById('minimax-m3.1-flash:free') !== undefined,
+      'UnoRouter catálogo estático tem Gemini 3.5 e K ExaOne',
+      UNOROUTER_MODELS.some(model => model.id === 'gemini-3.5-flash-lite:free') &&
+        getUnoRouterModelById('k-exaone-2.5:free') !== undefined &&
+        !UNOROUTER_MODELS.some(model => model.id === 'gemini-3-flash:free'),
+    );
+    check(
+      'UnoRouter fallback só usa modelos verificados',
+      UNOROUTER_VERIFIED_FALLBACK.every(id => getUnoRouterModelById(id) !== undefined) &&
+        UNOROUTER_VERIFIED_FALLBACK.every(id => isUnoRouterTextModel(id, ['openai'])),
     );
   }
 
@@ -2431,7 +2497,7 @@ async function main(): Promise<void> {
     try {
       const res = await sendToUnoRouter(
         [{ role: 'user', content: 'oi', timestamp: 1 }],
-        'gemini-3-flash:free',
+        'gemini-3.5-flash-lite:free',
         256,
         'uno-test',
       );
@@ -2442,7 +2508,7 @@ async function main(): Promise<void> {
       check(
         'UnoRouter envia Bearer e modelo com :free',
         capturedHeaders['Authorization'] === 'Bearer uno-test' &&
-          capturedBody['model'] === 'gemini-3-flash:free',
+          capturedBody['model'] === 'gemini-3.5-flash-lite:free',
       );
       check('UnoRouter converte resposta OpenAI', res.text === 'uno ok');
     } finally {
@@ -2460,7 +2526,7 @@ async function main(): Promise<void> {
       try {
         await sendToUnoRouter(
           [{ role: 'user', content: 'oi', timestamp: 1 }],
-          'mimo-v2.6-flash:free',
+          'deepseek-v4.1-flash:free',
           128,
           'uno-test',
         );
@@ -2488,7 +2554,7 @@ async function main(): Promise<void> {
     } catch (error) {
       caught = error instanceof Error ? error.message : String(error);
     }
-    check('UnoRouter bloqueia modelo fora do free verificado', caught.includes('free tier'));
+    check('UnoRouter bloqueia modelo fora do catálogo de texto', caught.includes('catálogo de texto'));
   }
 
   if (failures > 0) {

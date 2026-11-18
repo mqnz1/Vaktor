@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import {
   DEFAULT_ASSIGNMENTS,
   ORCHESTRATOR_ROLES,
+  ROLE_FALLBACK_CHAINS,
   buildOrchestrationPayload,
   createVaktorApi,
   ensureVaktorWorkspace,
@@ -95,9 +96,12 @@ async function main(): Promise<void> {
   check('5 papéis definidos', ORCHESTRATOR_ROLES.length === 5);
   check('planner é o líder', roleDefinition('planner').kind === 'leader');
   check('defaults cobrem todos os papéis', ORCHESTRATOR_ROLES.every(role => DEFAULT_ASSIGNMENTS[role.id].length > 0));
+  const brokenProvider = /^(echo|requesty|agentrouter|opencode|gemini|openrouter|harbor|apinex|vyceai|qoder|deepai|numes|nightrouter|fta)::/;
+  const confirmedProvider = /^(nvidia|zro|unorouter|qronos|kilo)::/;
   check('defaults não usam provedores quebrados',
-    !Object.values(DEFAULT_ASSIGNMENTS).some(model =>
-      /^(echo|requesty|agentrouter)::/.test(model)));
+    !Object.values(DEFAULT_ASSIGNMENTS).some(model => brokenProvider.test(model)));
+  check('fallbacks usam só provedores confirmados',
+    Object.values(ROLE_FALLBACK_CHAINS).flat().every(model => confirmedProvider.test(model)));
 
   const payload = buildOrchestrationPayload(DEFAULT_ASSIGNMENTS, 'implementar feature');
   check('payload usa comando orchestrate', payload.command === 'orchestrate');

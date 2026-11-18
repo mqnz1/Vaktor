@@ -85,6 +85,8 @@ export async function sendToProxyGateLLM(
   const opts = typeof thinking === 'object' ? thinking : undefined;
   const lastMessage = messages[messages.length - 1];
   const userContent = lastMessage?.content || '';
+  // Groq rejeita campos internos como timestamp/tokenCount nas mensagens.
+  const groqMessages = messages.map(({ role, content }) => ({ role, content }));
 
   try {
     // reasoning_effort só para modelos nativos que aceitam esse parâmetro no Groq
@@ -101,7 +103,7 @@ export async function sendToProxyGateLLM(
         },
         body: JSON.stringify({
           model: modelId,
-          messages,
+          messages: groqMessages,
           max_tokens: Math.min(maxTokens, 8192),
           temperature: typeof temperature === 'number' ? temperature : 0.7,
           ...(wantsReasoning ? { reasoning_effort: opts.effort } : {}),

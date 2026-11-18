@@ -81,32 +81,22 @@ import type {
 } from '../thinking/index.js';
 
 // Cadeia fixa de reserva. Os modelos grátis do catálogo entram na frente
-// (ver getFallbackChain), para reduzir custo antes de tentar os pagos.
+// (ver getFallbackChain); esta lista só usa provedores confirmados na auditoria.
 const FALLBACK_CHAIN = [
-  'claude-sonnet-5',
-  'claude-haiku-4-5-20251001',
-  'claude-sonnet-4-6',
-  'deepseek-v4.1-flash',
-  'mistral-small-2603',
-  'gpt-4o-mini',
-  'gemini-2.5-flash',
+  'nvidia/nemotron-3.5-lightning-30b-a3b',
+  'zro::deepseek-v4.1-flash',
+  'glm-5.3-flash',
+  'kilo-auto/free',
+  'k-exaone-2.5:free',
 ];
 
-// Provedores grátis mais estáveis para o modo auto. Notion/Notion Web ficam
-// de fora por dependerem de cookie e serem mais lentos/frágeis.
+// Provedores grátis confirmados na auditoria. Notion/Notion Web ficam
+// de fora por dependerem de cookie; OpenCode/APInex/Requesty/FTA/Harbor/
+// Qoder/DeepAI ficaram sem cota ou com erro de acesso.
 const PREFERRED_FREE_PROVIDERS = new Set<ProviderId>([
-  'opencode',
   'qronos',
-  'zro',
   'unorouter',
-  'apinex',
-  'requesty',
   'kilo',
-  'fta',
-  'harbor',
-  'qoder',
-  'deepai',
-  'iteracompute',
 ]);
 
 function providerHasCredential(provider: ProviderId): boolean {
@@ -125,7 +115,7 @@ function providerHasCredential(provider: ProviderId): boolean {
 // Modelos baratos para prompts triviais. `gpt-4o-mini` pertence ao Echo e
 // hoje o upstream OpenAI do Echo está com credencial inválida; Haiku 4.5 é
 // o modelo econômico que responde pela rota nativa da Anthropic.
-const TRIVIAL_MODEL = 'claude-haiku-4-5-20251001';
+const TRIVIAL_MODEL = 'kilo::kilo-auto/free';
 
 // Modelos econômicos para compactar o histórico do chat. O primeiro com
 // credencial disponível é usado; se todos falharem, cai no resumo local.
@@ -250,7 +240,7 @@ export class AIRouter {
       const count = await loadZroCatalog(zroApiKey);
       if (count === 0 && zroDynamicEnabled()) {
         this.warnings.push(
-          'Zro: catálogo remoto indisponível; usando os modelos Flash conhecidos.',
+          'Zro: catálogo remoto indisponível; usando os 4 modelos oficiais.',
         );
       }
     }
@@ -260,7 +250,7 @@ export class AIRouter {
       const count = await loadUnoRouterCatalog(unorouterApiKey);
       if (count === 0 && unorouterDynamicEnabled()) {
         this.warnings.push(
-          'UnoRouter: catálogo remoto indisponível; usando os modelos free verificados.',
+          'UnoRouter: catálogo remoto indisponível; usando os modelos free estáticos.',
         );
       }
     }
@@ -369,7 +359,10 @@ export class AIRouter {
     const pool = (preferred.length > 0 ? preferred : usable).slice(0, 4);
     const members: ComboMember[] = pool.map(model => ({ model: model.qualifiedId, weight: 1 }));
     if (members.length === 0) {
-      members.push({ model: 'claude-sonnet-5', weight: 2 }, { model: TRIVIAL_MODEL, weight: 1 });
+      members.push(
+        { model: 'nvidia::nvidia/nemotron-3.5-lightning-30b-a3b', weight: 2 },
+        { model: 'zro::deepseek-v4.1-flash', weight: 1 },
+      );
     }
     return members;
   }
@@ -746,7 +739,7 @@ export class AIRouter {
   }
 
   // Escolha determinística do modo auto: prioriza modelos grátis que o
-  // usuário realmente tem credencial, depois cai no Sonnet 5.
+  // usuário realmente tem credencial, depois cai no NVIDIA confirmado.
   private pickAutoModel(): string {
     if (this.config.preferFreeModels !== false) {
       const usable = listFreeModels().filter(model => providerHasCredential(model.provider));
@@ -754,7 +747,7 @@ export class AIRouter {
       const pool = preferred.length > 0 ? preferred : usable;
       if (pool.length > 0) return pool[0]!.qualifiedId;
     }
-    return 'claude-sonnet-5';
+    return 'nvidia::nvidia/nemotron-3.5-lightning-30b-a3b';
   }
 
   // Seleciona o modelo ideal baseado no estado atual

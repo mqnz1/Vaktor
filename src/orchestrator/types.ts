@@ -92,48 +92,52 @@ export function roleIcon(role: OrchestratorRole): string {
 
 export type OrchestratorAssignments = Record<OrchestratorRole, string>;
 
-// Padrões: somente provedores ativos/validados. Echo, Requesty e
-// AgentRouter ficam fora dos defaults (402/403/401).
+// Padrões: somente provedores com chamada 200 ou cota free confirmada
+// na auditoria. OpenCode (429), Gemini (2.5 EOL/3.8 503), OpenRouter
+// (saldo 0), Echo/Requesty/AgentRouter/APInex/VyceAI/Qoder ficam fora.
 export const DEFAULT_ASSIGNMENTS: OrchestratorAssignments = {
   planner: qualifyModelId('nvidia', 'nvidia/nemotron-3-ultra-550b-a55b'),
   scout: qualifyModelId('nvidia', 'nvidia/nemotron-3.5-lightning-30b-a3b'),
-  builder_backend: qualifyModelId('opencode', 'deepseek-v4.1-flash'),
-  builder_frontend: qualifyModelId('gemini', 'gemini-2.5-flash'),
-  fixer: qualifyModelId('opencode', 'claude-haiku-4-5'),
+  builder_backend: qualifyModelId('zro', 'deepseek-v4.1-flash'),
+  builder_frontend: qualifyModelId('nvidia', 'nvidia/nemotron-3.5-lightning-30b-a3b'),
+  fixer: qualifyModelId('qronos', 'glm-5.3-flash'),
 };
 
 export const ROLE_FALLBACK_CHAINS: Record<OrchestratorRole, readonly string[]> = {
   planner: [
-    qualifyModelId('opencode', 'deepseek-v4.1-flash'),
-    qualifyModelId('gemini', 'gemini-2.5-flash'),
+    qualifyModelId('nvidia', 'nvidia/nemotron-3-ultra-550b-a55b'),
     qualifyModelId('zro', 'deepseek-v4.1-flash'),
-    qualifyModelId('unorouter', 'gemini-3-flash:free'),
-    qualifyModelId('nvidia', 'z-ai/glm-5.3'),
+    qualifyModelId('unorouter', 'gemini-3.5-flash-lite:free'),
+    qualifyModelId('qronos', 'glm-5.3-flash'),
+    qualifyModelId('kilo', 'kilo-auto/free'),
   ],
   scout: [
-    qualifyModelId('opencode', 'deepseek-v4.1-flash'),
-    qualifyModelId('gemini', 'gemini-2.5-flash'),
+    qualifyModelId('nvidia', 'nvidia/nemotron-3.5-lightning-30b-a3b'),
     qualifyModelId('unorouter', 'gemini-3.5-flash-lite:free'),
-    qualifyModelId('opencode', 'gemini-3.5-flash-lite'),
+    qualifyModelId('zro', 'deepseek-v4.1-flash'),
+    qualifyModelId('kilo', 'kilo-auto/free'),
+    qualifyModelId('qronos', 'glm-5.3-flash'),
   ],
   builder_backend: [
     qualifyModelId('nvidia', 'nvidia/nemotron-3.5-lightning-30b-a3b'),
-    qualifyModelId('opencode', 'glm-5.3-flash'),
     qualifyModelId('zro', 'deepseek-v4.1-flash'),
-    qualifyModelId('gemini', 'gemini-2.5-flash'),
+    qualifyModelId('unorouter', 'k-exaone-2.5:free'),
+    qualifyModelId('kilo', 'kilo-auto/free'),
+    qualifyModelId('qronos', 'glm-5.3-flash'),
   ],
   builder_frontend: [
-    qualifyModelId('opencode', 'deepseek-v4.1-flash'),
     qualifyModelId('nvidia', 'nvidia/nemotron-3.5-lightning-30b-a3b'),
-    qualifyModelId('unorouter', 'mimo-v2.6-flash:free'),
-    qualifyModelId('gemini', 'gemini-2.5-pro'),
+    qualifyModelId('unorouter', 'gemini-3.5-flash-lite:free'),
+    qualifyModelId('zro', 'deepseek-v4.1-flash'),
+    qualifyModelId('qronos', 'glm-5.3-flash'),
+    qualifyModelId('kilo', 'kilo-auto/free'),
   ],
   fixer: [
-    qualifyModelId('opencode', 'deepseek-v4.1-flash'),
+    qualifyModelId('qronos', 'glm-5.3-flash'),
     qualifyModelId('nvidia', 'nvidia/nemotron-3.5-lightning-30b-a3b'),
     qualifyModelId('zro', 'deepseek-v4.1-flash'),
-    qualifyModelId('unorouter', 'minimax-m3.1-flash:free'),
-    qualifyModelId('gemini', 'gemini-2.5-flash'),
+    qualifyModelId('unorouter', 'k-exaone-2.5:free'),
+    qualifyModelId('kilo', 'kilo-auto/free'),
   ],
 };
 

@@ -21,7 +21,11 @@ function loadEnvFile(): void {
   if (!filePath) return;
 
   const raw = readFileSync(filePath, 'utf-8');
-  for (const line of raw.split('\n')) {
+  const fileEnv = new Map<string, string>();
+
+  // Duplicatas no arquivo: a última ocorrência vence. Variáveis já
+  // definidas no ambiente do processo continuam tendo prioridade.
+  for (const line of raw.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
 
@@ -30,8 +34,11 @@ function loadEnvFile(): void {
 
     const key = trimmed.slice(0, eqIdx).trim();
     const value = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+    if (key) fileEnv.set(key, value);
+  }
 
-    if (key && !(key in process.env)) {
+  for (const [key, value] of fileEnv) {
+    if (!(key in process.env)) {
       process.env[key] = value;
     }
   }
