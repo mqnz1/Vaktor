@@ -1,6 +1,6 @@
 {
   "name": "vaktor",
-  "version": "2.0.27",
+  "version": "2.0.28",
   "description": "Vaktor — AI router com gestão inteligente de créditos e fallback automático de modelos",
   "main": "dist/index.js",
   "bin": {

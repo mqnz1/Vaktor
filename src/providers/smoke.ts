@@ -185,6 +185,22 @@ async function main(): Promise<void> {
   check('Numes usa chave NUMES_API_KEY', PROVIDER_ENV_KEYS.numes === 'NUMES');
   check('NightRouter usa chave NIGHTROUTER_API_KEY', PROVIDER_ENV_KEYS.nightrouter === 'NIGHTROUTER');
   check('Numes tem modelos de fallback', NUMES_MODELS.length > 0);
+  check(
+    'Numes expõe o catálogo free atual',
+    NUMES_MODELS.length === 9 &&
+      NUMES_MODELS.every(model => model.id.endsWith(':free') && model.costPer1kTokensInput === 0) &&
+      [
+        'deepseek/deepseek-v4.1-flash:free',
+        'dealignai/deepseek-v4.1-flash-uncensored-fp8:free',
+        'moonshotai/kimi-k3.1-pro:free',
+        'uniboshi/kimi-k3-abliterated-v1:free',
+        'z-ai/glm-5.3:free',
+        'z-ai/glm-5.3-flash:free',
+        'dealignai/glm-5.3-uncensored-fp8:free',
+        'dealignai/glm-5.3-flash-uncensored-fp8:free',
+        'nvidia/nemotron-3-ultra-550b-a55b:free',
+      ].every(id => NUMES_MODELS.some(model => model.id === id)),
+  );
   check('NightRouter tem modelos de fallback', NIGHTROUTER_MODELS.length > 0);
 
   const numesMapped = mapNumesCatalog([

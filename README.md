@@ -1,82 +1,44 @@
 # Vaktor
 
-**Router de IA com interface de terminal moderna, gestão inteligente de créditos, multi-provedor e fallback automático para modelos 100% gratuitos.**
+**Router de IA com TUI, gestão de créditos, 24 provedores e fallback free-first.**
 
 ---
 
-## ⭐ Destaque: ProxyGateLLM Free Fallback (SEM Servidor!)
+## Visão geral
 
-Vaktor suporta **mais de 20 provedores** com fallback inteligente:
+O Vaktor é um roteador de modelos para terminal. Ele mantém um catálogo unificado de provedores, prioriza modelos gratuitos quando disponíveis e usa fallback por orçamento e por erro de API.
 
-1. **Puter.com** - $0.30 orçamento
-2. **AgentRouter** - $0.30 orçamento
-3. **OpenRouter** - $0.30 orçamento
-4. **Requesty** - 13 modelos gratuitos
-5. **Kilo Code** - 17 modelos gratuitos
-6. **FreeTheAI (FTA)** - modelos gratuitos
-7. **ProxyGateLLM** - 🎉 **GRÁTIS ILIMITADO** (direto, sem servidor!)
-   - GPT-4o via Pollinations
-   - Llama 3.1 70B via DuckDuckGo
-   - Mistral via Pollinations
-   - DeepSeek R1 via Pollinations
-   - Blackbox AI
-   - Phind 70B (código)
-   - E mais 5 modelos
-8. **Google Gemini** - API nativa (`GEMINI_API_KEY`) com catálogo dinâmico da
-   própria chave (modelos de chat Gemini/Gemma), streaming SSE e cancelamento;
-   sem a chave, os IDs `gemini-2.5-*` rodam pelo Echo Free (desflexão automática
-   no adapter de provedores)
-9. **Notion AI** - API pública beta de agentes (`NOTION_API_KEY`) com catálogo
-   dinâmico dos agentes acessíveis, `notion_ai` como fallback e polling de sessão
-10. **Notion AI (Web)** - API interna `runInferenceTranscript` com o cookie
-    `token_v2` da sessão do navegador, streaming NDJSON e 16 modelos
-11. **Itera Compute** - API OpenAI-compatible com o Qwen3.8 27B free
-    (`$0` input/output, 30M tokens/mês e 128K de contexto)
-12. **Qoder** - API nativa com PAT trocada por job token e catálogo de
-    15 modelos (Qwen3.8, Kimi, GLM, DeepSeek, MiniMax, Sonus/Cantus)
-13. **APInex** - gateway OpenAI-compatible com carteira USD e 42 modelos
-    (Claude, GPT, Gemini, Grok, Qwen, Kimi, GLM, DeepSeek e free/)
-14. **DeepAI** - API nativa de texto (`DEEPAI_API_KEY`) e **DeepAI Code**
-    com 18 modelos de chat (`DEEPAI_CODE_API_KEY`, 9 grátis/0 Theos)
-15. **Numes** - marketplace OpenAI-compatible (`NUMES_API_KEY`) com catálogo
-    dinâmico de modelos `autor/modelo`, preços por token e reasoning
-16. **NightRouter** - gateway OpenAI-compatible (`NIGHTROUTER_API_KEY`) com
-    Claude, GPT, Gemini, Kimi, GLM, Qwen e DeepSeek; catálogo via `/v1/models`
-17. **Qronos AI** - gateway OpenAI-compatible (`QRONOS_API_KEY`) com apenas os
-    modelos do free tier: Claude Haiku 5.5, GLM 5.3 Flash e Mercury 3 (`$0`)
-18. **Zro** - inferência privada para agentes (`ZRO_API_KEY`) com os modelos
-    oficiais DeepSeek V4.1 Flash, GLM 5.3, Dolly 2 Security e Abyss 1 (1M de
-    contexto; apenas o DeepSeek está liberado na chave atual)
-19. **UnoRouter** - gateway OpenAI-compatible (`UNOROUTER_API_KEY`) com todos os
-    LLMs `:free` de texto do `/v1/models`; imagem, áudio, embedding, aihorde e
-    typesafe-decisions ficam fora. Fallback verificado: Gemini 3.5 Flash Lite e
-    K ExaOne 2.5
+- **TUI padrão:** Solid/OpenTUI (`src/tui`), com streaming, cancelamento e persistência de sessões.
+- **UI legada:** Ink (`VAKTOR_UI=ink`).
+- **Provedores:** 24 no registry (`src/providers/registry.ts`): Puter, Groq, Qronos, Zro, UnoRouter, Kilo, NVIDIA, Gemini, Notion, Notion Web, Echo, OpenRouter, Requesty, FreeTheAI, NightRouter, Numes, APInex, DeepAI, VyceAI, Qoder, Token Harbor, OpenCode Zen, Itera Compute e AgentRouter.
+- **Fallback:** modelos grátis primeiro; depois a cadeia fixa `nvidia/nemotron-3.5-lightning-30b-a3b` → `zro::deepseek-v4.1-flash` → `glm-5.3-flash` → `kilo-auto/free` → `k-exaone-2.5:free`.
+- **Provedores grátis preferidos:** `qronos`, `unorouter` e `kilo`. O modelo para prompts triviais é `kilo::kilo-auto/free`.
+- **Orçamento:** global em USD (`CREDIT_BUDGET_USD`), com teto opcional por combo.
+- **Agente:** loop com 14 ferramentas, verificação e Best-of-N opcional.
 
-Também: **Echo Free** (Anthropic · OpenAI · Gemini), **NVIDIA NIM**,
-**OpenCode Zen**, **Token Harbor**, **Itera Compute**, **Qoder**, **APInex**,
-**Qronos AI**, **Zro** e **UnoRouter**.
+> **Groq (`proxygatellm`)**: o provedor interno chamado `proxygatellm` é o **Groq** (`https://api.groq.com/openai/v1`), autenticado por `GROQ_API_KEY`. O catálogo tem 4 modelos; na auditoria local apenas `openai/gpt-oss-120b` respondeu `200`.
 
-**Sem API key necessária! Sem servidor para rodar!**
+> **Visão:** o módulo `src/vision` existe para upload/formatação, mas ainda não está integrado ao roteamento de chat. Não há suporte a imagens no fluxo principal.
 
-👉 [Guia de Setup ProxyGateLLM Direto](./PROXYGATELLM_DIRECT.md)
+**Sem servidor próprio.** O Vaktor chama as APIs dos provedores diretamente; é necessário configurar ao menos uma chave no `.env`.
 
 ---
 
 ## Instalação (Windows)
 
-Pré-requisito: apenas internet na primeira execução. **Não precisa instalar Node.js, npm nem TypeScript manualmente.**
+Pré-requisito: internet na primeira execução. O projeto exige **Node.js >= 26.4.0**; o `vaktor.cmd` baixa uma versão portátil (`v26.13.0`) se o Node estiver ausente ou for anterior à v26.
 
 1. Baixe ou clone a pasta do Vaktor.
 2. Dê duplo clique em **`vaktor.cmd`** (ou rode `vaktor.cmd` no cmd).
 
 Esse único arquivo faz tudo:
 
-- usa o Node.js já instalado ou baixa uma versão portátil;
+- usa o Node.js já instalado (>= v26) ou baixa a versão portátil;
 - instala as dependências (o npm vem junto com o Node);
 - cria o `.env` modelo (e pede para você preencher as chaves);
 - compila o TypeScript (instalado como dependência do projeto);
 - registra o comando `vaktor` no `PATH` do usuário;
-- abre a interface.
+- abre a interface com `node --experimental-ffi`.
 
 3. Na primeira vez, edite o `.env` e preencha suas chaves de API.
 4. Abra um **novo** cmd e digite:
@@ -91,6 +53,8 @@ Nas execuções seguintes ele só recompila se algum arquivo de `src/` mudou.
 Para desfazer o comando global: remova `C:\caminho\do\Vaktor` da variável `Path` do usuário.
 
 ### Linux / macOS
+
+Requer **Node.js >= 26.4.0**.
 
 ```bash
 npm install
@@ -109,7 +73,7 @@ npm run dev
 
 # Produção
 npm run build
-npm start
+npm start     # node --experimental-ffi dist/index.js
 ```
 
 ---
@@ -122,7 +86,7 @@ ponta em **ciano neon pulsante** (respiração de 2,6 s, ~14 fps) e sombra preta
 ```
 ██      ██
  ▀█▄  ▄█▀   Vaktor
-   ▀██▀     claude-sonnet-4-6 (Echo Free) · Auto · Code · Home
+   ▀██▀     modelo ativo · Auto · Code · Home
     ▄▄▄▄
 ```
 
@@ -135,7 +99,7 @@ terminal interativo (pipe, CI, testes) e pode ser forçada off:
 VAKTOR_NO_ANIMATION=1   # ou VAKTOR_ANIMATION=off
 ```
 
-Em terminais sem suporte a truecolor, o Ink degrada para a cor mais próxima.
+Em terminais sem suporte a truecolor, a UI degrada para a cor mais próxima.
 
 ---
 
@@ -149,7 +113,7 @@ Antes de compartilhar a pasta, **apague o `.env`** — ele contém suas chaves. 
 2. preencher o próprio `.env` gerado pelo script;
 3. digitar `vaktor` em um cmd novo.
 
-Vaktor automaticamente faz fallback para modelos grátis quando orçamento dos pagos esgotar!
+O Vaktor usa fallback free-first quando o orçamento acaba. Para trocar de modelo também em erros de API, ative `AUTO_FALLBACK=true` no modo auto.
 
 ---
 
@@ -174,7 +138,7 @@ A cada mensagem, o Vaktor escolhe a skill `core` (sempre ativa) mais até 2 skil
 | `daily` | chat | Organização, planos, checklists e priorização |
 | `writing` | chat | E-mails, documentos, resumos e explicações |
 
-### Variáveis de ambiente
+### Variáveis de ambiente (skills)
 
 | Variável | Padrão | Uso |
 |---|---|---|
@@ -204,7 +168,7 @@ O Vaktor tem um motor de raciocínio próprio, independente do provedor. Ele dec
 
 O raciocínio fica oculto por padrão. Use `/thinking show` para exibir (até 12 linhas, sem tags).
 
-### Variáveis de ambiente
+### Variáveis de ambiente (thinking)
 
 | Variável | Padrão | Uso |
 |---|---|---|
@@ -223,38 +187,26 @@ A chave do cache inclui a estratégia de thinking. Ligar o thinking **não** dev
 
 ## Comandos
 
-| Comando     | Descrição                                                        |
-|-------------|------------------------------------------------------------------|
+| Comando | Descrição |
+|---|---|
 | `/mode [chat\|code]` | Alterna ou define o modo; sem argumento alterna chat ↔ código |
-| `/modelos`  | Abre menu de seleção de modelo com preços e metadados            |
-| `/models` SHIFT/TAB | Alterna para a tela de provedores; Enter filtra os modelos de um provedor |
-| `/orquestrator [tarefa]` | Abre o orquestrador (planner + 4 workers); escolha o modelo de cada papel e inicie |
-| `/new`      | Cria uma nova sessão com o histórico da conversa limpo           |
-| `/credits`  | Exibe painel detalhado de consumo de créditos e cache            |
-| `/skills`   | Lista as skills e mostra quais estão ativas                      |
-| `/skill <id>` | Força a skill na próxima mensagem                              |
-| `/skill off` | Limpa as skills forçadas                                        |
-| `/skills on` / `/skills off` | Liga ou desliga o sistema em runtime            |
-| `/thinking` | Mostra o estado atual do thinking                               |
-| `/thinking on` / `off` / `auto` | Define o modo (`on` = always)                   |
-| `/thinking show` / `hide` | Exibe ou oculta o raciocínio                      |
-| `/thinking budget N` | Ajusta o orçamento (1000–32000)                        |
-| `/agente` / `/agent` | Mostra o estado do agente (`on/off`, max iterations, tools)        |
-| `/agent on` / `off`  | Liga ou desliga o agente de código                               |
-| `/agent max N`       | Ajusta o máximo de iterações do agente (1–20)                    |
-| `/verify`   | Roda a verificação do projeto (typecheck → test → build)        |
-| `/context`  | Mostra o repo map usado como contexto do agente                 |
-| `/memory`   | Mostra a memória do projeto (`VAKTOR.md`)                       |
-| `/memory add <texto>` | Acrescenta uma entrada na memória (só cria o arquivo aqui) |
-| `/security` | Mostra o perfil de segurança (`SECURITY.md`) e o estado |
-| `/security on` / `off` | Liga/desliga o perfil de segurança em runtime         |
-| `/mcp`       | Estado dos servidores MCP (`●` conectado, `✗` erro, `○` parado) |
-| `/mcp connect <nome>` | Conecta a um servidor MCP                        |
-| `/mcp disconnect <nome>` | Desconecta de um servidor MCP                  |
-| `/mcp tools [nome]` | Lista as ferramentas descobertas (marca `⚠` destrutivas) |
-| `/tools`    | Lista as ferramentas do agente e o estado das capacidades (write/rede/install/git) |
-| `/limpar`   | Limpa o histórico da conversa atual                              |
-| `/sair`     | Encerra a aplicação                                              |
+| `/models [free]` | Abre o menu de modelos; `free` lista apenas os gratuitos |
+| `/free` | Abre o menu de provedores gratuitos |
+| `/combo [on\|off\|status\|set\|add]` | Liga/desliga o combo ponderado e edita membros (`modelo=peso`) |
+| `/orquestrator [tarefa]` | Abre o orquestrador (aliases: `/orchestrator`, `/orquestrador`) |
+| `/new` | Cria uma nova sessão (aliases: `/novo`, `/clear`, `/limpar`) |
+| `/sessions` | Lista, retoma e apaga sessões salvas |
+| `/directory [caminho]` | Mostra ou troca o diretório de trabalho |
+| `/credits` | Mostra o orçamento restante |
+| `/skills [on\|off]` | Liga/desliga skills e lista as disponíveis |
+| `/thinking [on\|off\|auto\|show\|hide\|budget N\|variant NOME]` | Controla o raciocínio |
+| `/agent [on\|off]` | Liga/desliga o agente de código |
+| `/context [refresh]` | Mostra o repo map usado como contexto |
+| `/memory [show\|path\|add <texto>]` | Lê ou edita `VAKTOR.md` |
+| `/resources [show\|path\|init\|add <seção> <texto>]` | Lê ou edita `RESOURCES.md` |
+| `/exit` | Encerra a aplicação |
+
+A tabela acima é da **TUI padrão** (Solid/OpenTUI). A UI legada Ink (`VAKTOR_UI=ink`) tem outro conjunto de comandos.
 
 A TUI toca cues curtos ao abrir/fechar menus, ao criar uma sessão e quando a IA
 termina de responder. Defina `VAKTOR_SOUND=off` para silenciar (ou
@@ -375,8 +327,7 @@ pergunta.
 
 O arquivo é procurado primeiro no **workdir** do usuário e, se não existir, no
 diretório de instalação do Vaktor (o `SECURITY.md` deste repositório é o default).
-Controlado por `SECURITY_ENABLED` (padrão `false`) e `SECURITY_FILE`. Em runtime:
-`/security on|off` para ligar/desligar e `/security` para inspecionar.
+Controlado por `SECURITY_ENABLED` (padrão `false`) e `SECURITY_FILE`. Na UI legada Ink, use `/security on|off` e `/security` para inspecionar; na TUI padrão, ajuste no `.env`.
 
 Importante: **não é um jailbreak**. O próprio perfil define os limites
 (autorizado/educacional) e o Vaktor continua recusando ataque a sistemas de
@@ -388,7 +339,8 @@ loader também passa o texto pela redação de segredos (chaves e paths absoluto
 O Vaktor é também um **cliente MCP** (Model Context Protocol): conecta a
 servidores externos (locais via stdio ou remotos via HTTPS) e o agente passa a
 usar as ferramentas deles pela tool `mcp_call`. A descoberta é automática
-(`tools/list`), o catálogo entra como contexto e o `/mcp` gerencia tudo.
+(`tools/list`) e o catálogo entra como contexto. A UI legada Ink expõe o
+comando `/mcp`; na TUI padrão, o acesso é pela tool do agente.
 Desligado por padrão (`MCP_ENABLED=false`).
 
 ```
@@ -469,53 +421,28 @@ Veja o guia completo em [`docs/FINE-TUNING.md`](./docs/FINE-TUNING.md).
 
 ### Como funciona
 
-O `CreditManager` rastreia cada requisição e estima o custo com base nos preços por 1k tokens de cada modelo.
+O `CreditManager` rastreia cada requisição e estima o custo com base nos preços por 1k tokens de cada modelo. O orçamento é **global** (`CREDIT_BUDGET_USD`, padrão `1.0`); o runtime atual não aplica orçamentos separados por provedor.
 
-### Fallback automático multi-provedor
+### Fallback
 
-Quando um provedor esgota o orçamento:
+A ordem efetiva é:
 
-1. Router troca automaticamente para o próximo provedor
-2. Notificação aparece: `! Trocado para [Modelo] ([Provedor]) — limite anterior atingido`
-3. Quando **todos os 3 pagos** esgotam → **ProxyGateLLM FREE assume**
+1. Modelos gratuitos do catálogo com credencial disponível (até 8), priorizando `qronos`, `unorouter` e `kilo`.
+2. Cadeia fixa de reserva: `nvidia/nemotron-3.5-lightning-30b-a3b` → `zro::deepseek-v4.1-flash` → `glm-5.3-flash` → `kilo-auto/free` → `k-exaone-2.5:free`.
 
-**Chain de fallback:**
-```
-Puter ($0.30)
-  ↓ orçamento esgota
-AgentRouter ($0.30)
-  ↓ orçamento esgota
-OpenRouter ($0.30)
-  ↓ orçamento esgota
-Echo Free ($0.30)
-  ↓ orçamento esgota
-NVIDIA ($0.30)
-  ↓ orçamento esgota
-OpenCode ($0.30)
-  ↓ orçamento esgota
-Token Harbor ($0.30)
-  ↓ orçamento esgota
-Requesty (free)
-  ↓ limite diário
-Kilo Code (free)
-  ↓ limite/indisponível
-FreeTheAI (free)
-  ↓ limite/indisponível
-ProxyGateLLM FREE 🎉
-  ↓ ilimitado
-```
+Quando o orçamento acaba, o router troca de modelo e notifica a UI. Em erros de API, a troca só acontece com `AUTO_FALLBACK=true` e no modo auto. O combo tem teto próprio (`COMBO_BUDGET_USD` / `COMBO_MAX_COST_PER_REQUEST_USD`).
 
 ### Redução de desperdício
 
 - **Cache**: Respostas idênticas retornadas sem custos. TTL 1h.
 - **Truncamento**: Histórico limitado a `MAX_CONTEXT_MESSAGES`.
-- **Smart Routing**: Perguntas triviais → modelo mais barato automaticamente.
+- **Roteamento auto**: Perguntas triviais usam `kilo::kilo-auto/free`.
 
 ---
 
 ## Modelos disponíveis
 
-### Via Puter.com (Provedor 1)
+### Via Puter.com
 
 O catálogo do Puter é carregado em runtime de `/puterai/chat/models/details`
 (atualmente ~978 modelos de chat após filtrar ASR/imagem/embedding). Custos e
@@ -529,23 +456,18 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 | Fonte de custo/contexto | campos `costs` e `context` da API do Puter |
 | Desativar dinâmico | `PUTER_DYNAMIC_MODELS=false` |
 
-### Via ProxyGateLLM FREE 🎉 (Direto, sem servidor)
+### Via Groq (provider interno `proxygatellm`)
 
-| Modelo                      | Provedor    | Contexto | Custo  |
-|-----------------------------|-------------|----------|--------|
-| GPT-4o (Pollinations)       | Pollinations| 4k       | FREE   |
-| Llama 3.1 70B (Pollinations)| Pollinations| 4k       | FREE   |
-| Mistral (Pollinations)      | Pollinations| 4k       | FREE   |
-| DeepSeek R1 (Pollinations)  | Pollinations| 4k       | FREE   |
-| Qwen 2.5 (Pollinations)     | Pollinations| 4k       | FREE   |
-| GPT-4o Mini (DuckDuckGo)    | DuckDuckGo  | 4k       | FREE   |
-| Claude Haiku (DuckDuckGo)   | DuckDuckGo  | 4k       | FREE   |
-| Mixtral (DuckDuckGo)        | DuckDuckGo  | 4k       | FREE   |
-| Llama 3.1 70B (DuckDuckGo)  | DuckDuckGo  | 4k       | FREE   |
-| Blackbox AI                 | Blackbox    | 4k       | FREE   |
-| Phind 70B                   | Phind       | 4k       | FREE   |
+O ID interno `proxygatellm` é mantido por compatibilidade, mas o provedor é o **Groq** (`https://api.groq.com/openai/v1`), autenticado por `GROQ_API_KEY`.
 
-**Total: 11 modelos grátis, sem API key, sem servidor!**
+| Modelo | Contexto | Status |
+|---|---|---|
+| `openai/gpt-oss-120b` | 8k | confirmado na auditoria (`200`) |
+| `mixtral-8x7b-32768` | 32k | catálogo |
+| `llama-3.3-70b-versatile` | 8k | catálogo |
+| `llama-3.1-405b-reasoning` | 128k | catálogo |
+
+Não é gratuito nem ilimitado. Os custos estimados por token ficam em `src/providers/proxygatellm.ts`.
 
 ---
 
@@ -555,26 +477,20 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 |--------------------------|-------------|------------------------------------------------|
 | `PUTER_API_KEY`          | —           | Token JWT do Puter.com                         |
 | `PUTER_DYNAMIC_MODELS`   | `true`      | Carrega o catálogo completo via API do Puter   |
-| `PUTER_BUDGET_USD`       | `0.30`      | Orçamento Puter por sessão (USD)               |
 | `AGENTROUTER_API_KEY`    | —           | Chave AgentRouter (`co.agentrouter.org`)       |
-| `AGENTROUTER_BUDGET_USD` | `0.30`      | Orçamento AgentRouter (USD)                    |
 | `OPENROUTER_API_KEY`     | —           | Chave OpenRouter                               |
-| `OPENROUTER_BUDGET_USD`  | `0.30`      | Orçamento OpenRouter (USD)                     |
 | `NUMES_API_KEY`          | —           | Chave Numes (`api.numes.ai/api/v1`)            |
+| `NUMES_DYNAMIC_MODELS`   | `false`     | Usa o catálogo remoto do Numes; o padrão é o catálogo free local |
 | `NIGHTROUTER_API_KEY`    | —           | Chave NightRouter (`api.nightrouter.ai/v1`)    |
 | `REQUESTY_API_KEY`       | —           | Chave Requesty (`rqsty_...`)                   |
 | `KILO_API_KEY`           | —           | Chave Kilo Code (JWT; enviada via `x-api-key`) |
 | `FTAI_API_KEY`           | —           | Chave FreeTheAI (`ftai_...`)                   |
-| `GROQ_API_KEY`           | —           | Chave Groq (provedor ProxyGateLLM)             |
-| `GROQ_BUDGET_USD`        | `0.30`      | Orçamento Groq (USD)                           |
+| `GROQ_API_KEY`           | —           | Chave Groq (provider interno `proxygatellm`)   |
 | `ECHO_API_KEY`           | —           | Chave Echo Free (`echo_...`, roteador multi-IA) |
-| `ECHO_BUDGET_USD`        | `0.30`      | Orçamento Echo Free (USD)                      |
+| `ECHO_API_KEY_POOL`      | -           | Pool de chaves Echo separado por vírgula       |
 | `NVIDIA_API_KEY`         | —           | Chave NVIDIA NIM (`nvapi-...`)                  |
-| `NVIDIA_BUDGET_USD`      | `0.30`      | Orçamento NVIDIA (USD)                         |
 | `OPENCODE_API_KEY`       | —           | Chave OpenCode Zen (`oc_...`)                   |
-| `OPENCODE_BUDGET_USD`    | `0.30`      | Orçamento OpenCode (USD)                       |
 | `HARBOR_API_KEY`         | —           | Chave Token Harbor (`thk_live_...`)             |
-| `HARBOR_BUDGET_USD`      | `0.30`      | Orçamento Token Harbor (USD)                   |
 | `ITERACOMPUTE_API_KEY`   | -           | Chave Itera Compute (API OpenAI-compatible)     |
 | `QODER_API_KEY`          | -           | PAT Qoder (`pt-...`; vira job token `jt-...`)   |
 | `APINEX_API_KEY`         | -           | Chave APInex (`sk-apx...`, carteira USD)       |
@@ -583,11 +499,11 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 | `UNOROUTER_API_KEY`      | -           | Chave UnoRouter (`sk-...`; LLMs `:free` de texto)|
 | `VYCEAI_API_KEY`         | -           | Chave principal Vyce AI                         |
 | `VYCEAI_API_KEYS`        | -           | Pool opcional Vyce AI separado por vírgula      |
+| `VYCEAI_API_KEY_POOL`    | -           | Alias legado do pool Vyce AI                    |
 | `DEEPAI_API_KEY`         | -           | Chave DeepAI (texto/resumo e fallback do DeepAI Code) |
 | `DEEPAI_CODE_API_KEY`    | -           | Chave da conta DeepAI Code (login Google/Apple; preferida no chat) |
 | `DEEPAI_CODE_ACCOUNT_FILE` | `~/.deepai-code/userdata/secrets/deepai-account.bin` | Conta salva pelo app DeepAI Code (fallback quando não há chave no `.env`) |
 | `GEMINI_API_KEY`         | —           | Chave Google Gemini (`AIza...`, API nativa)    |
-| `GEMINI_BUDGET_USD`      | `0.30`      | Orçamento Google Gemini (USD)                  |
 | `GEMINI_MODEL`           | `gemini-2.5-flash` | Modelo inicial quando `DEFAULT_MODEL` não está definido |
 | `GEMINI_DYNAMIC_MODELS`  | `true`      | Carrega o catálogo real da chave em `/v1beta/models` |
 | `NOTION_API_KEY`         | -           | Token da conexão Notion (`ntn_...`, API de agentes) |
@@ -601,14 +517,32 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 | `NOTION_WEB_BASE_URL`    | `https://www.notion.so` | Base interna; use `https://app.notion.com` se necessário |
 | `NOTION_WEB_WORKFLOW_ID` | -           | Opcional: workflow de um Custom Agent |
 | `NOTION_WEB_CONTEXT_PAGE_ID` | -       | Opcional: página de contexto do Custom Agent |
-| `PROXYGATELLM_ENABLED`   | `true`      | Ativar ProxyGateLLM direto (sem servidor)      |
 | `MAX_TOKENS_PER_REQUEST` | `4096`      | Limite de tokens por requisição                |
 | `ENABLE_RESPONSE_CACHE`  | `true`      | Habilita cache de respostas                    |
 | `MAX_CONTEXT_MESSAGES`   | `20`        | Máximo de mensagens no contexto                |
 | `DEFAULT_MODEL`          | `auto`      | Modelo inicial (`auto` ou ID do modelo)        |
 | `FALLBACK_MODEL`         | `claude-haiku-4-5-20251001` | Modelo de fallback                |
+| `CREDIT_BUDGET_USD`      | `1.0`       | Orçamento global da sessão (USD)               |
+| `PREFER_FREE_MODELS`     | `true`      | Prioriza modelos gratuitos no modo auto        |
+| `AUTO_FALLBACK`          | `false`     | Troca de modelo em erro de API no modo auto    |
+| `COMBO_ENABLED`          | `false`     | Liga o combo na inicialização                  |
+| `COMBO_MODELS`           | -           | Membros no formato `provider::modelo=peso`     |
+| `COMBO_FALLBACK`         | -           | Lista de fallback do combo                     |
+| `COMBO_BUDGET_USD`       | `0`         | Teto do combo (`0` = sem teto)                 |
+| `COMBO_MAX_COST_PER_REQUEST_USD` | `0` | Custo máximo por requisição do combo         |
+| `COMBO_WAKE_RETRIES`     | `1`         | Tentativas de wake-up (0–5)                    |
+| `COMBO_WAKE_DELAY_MS`    | `700`       | Delay entre tentativas (0–10000 ms)            |
+| `VAKTOR_UPDATE_CHECK`    | `on`        | Checa atualizações na TUI (só em TTY)          |
+| `VAKTOR_UPDATE_REPO`     | `mqnz1/Vaktor` | Repositório GitHub consultado               |
+| `VAKTOR_UPDATE_BRANCH`   | `main`      | Branch usada no fallback via `package.json`    |
+| `VAKTOR_UPDATE_INTERVAL_MS` | `21600000` | Intervalo entre checagens (mín. 60000 ms)   |
+| `VAKTOR_UPDATE_STATE_FILE` | `~/.vaktor/update.json` | Versão adiada no botão Install later |
 
-**Orçamento Total**: `$2.70` (Puter + AgentRouter + OpenRouter + Echo Free + NVIDIA + OpenCode + Token Harbor + Google Gemini) + **∞** (ProxyGateLLM FREE)
+O orçamento é **global** (`CREDIT_BUDGET_USD`); o runtime atual não aplica orçamentos separados por provedor. Os valores `*_BUDGET_USD` que aparecem no template do `vaktor.cmd` são legados e não são lidos pelo código.
+
+### Atualizações
+
+Quando o repositório público tiver uma release, tag ou `package.json` com versão maior que a instalada, a TUI mostra `Update available: vX.Y.Z` com os botões `[ Install ]` e `[ Install later ]`. Para o aviso aparecer, incremente a versão em `package.json` ou publique uma release/tag. `Install` roda `git pull --ff-only`, `npm install` e `npm run build` quando a instalação é um checkout Git; fora disso, tenta `npm install -g vaktor@latest`. `Install later` grava a versão adiada em `~/.vaktor/update.json` e só volta a avisar em uma versão nova. Use `VAKTOR_UPDATE_CHECK=off` para desligar.
 
 > **Google Gemini**: API nativa `generativelanguage.googleapis.com/v1beta`. No boot, o catálogo real da própria chave é carregado de `/v1beta/models` e filtrado para modelos de chat com `generateContent` (Gemini/Gemma); TTS, imagem, música, transcrição e modelos especializados ficam de fora. `GEMINI_DYNAMIC_MODELS=false` mantém o fallback estático (`gemini-2.5-flash`, `gemini-2.5-pro`). A chave vai **só no cabeçalho `x-goog-api-key`** (nunca na URL), com timeout de 180s combinado ao cancelamento (Ctrl+C na TUI). Suporta streaming SSE (`streamGenerateContent?alt=sse`) — a TUI mostra o texto chegando token a token — e `thinkingConfig.thinkingBudget` quando o thinking nativo está ativo. **Custos são estimativas por família** (flash, flash-lite, pro), porque o endpoint de modelos não expõe preço. Sem `GEMINI_API_KEY`, o adapter de provedores desvia os IDs `gemini-2.5-*` para o Echo Free e só falha com instrução clara se o ID for exclusivo da API nativa.
 
@@ -652,7 +586,7 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 >
 > **Requesty**: gateway OpenAI-compatible em `https://router.requesty.ai/v1`. Só entram os **13 modelos gratuitos** documentados (Nemotron, Laguna, Gemma 4, Leanstral, Ling); nenhum modelo pago é exposto. Limite free: 200 req/dia e 20 req/min para organizações novas.
 >
-> **Numes**: marketplace OpenAI-compatible em `https://api.numes.ai/api/v1` com IDs `autor/modelo` (ex.: `openai/gpt-6-luna`). O catálogo vem de `GET /models?output_modalities=text` e só lista ofertas na moeda da chave. Preços USD usam `pricing.*` por token; chaves BTC usam satoshis e são convertidas pelo `reference.usd_per_btc` (com `usd_rates` preferido quando presente). Reasoning vai como `reasoning: { effort }`. Use `numes::autor/modelo` para forçar o provedor quando o ID também existir em outro catálogo.
+> **Numes**: marketplace OpenAI-compatible em `https://api.numes.ai/api/v1` com IDs `autor/modelo`. O catálogo free local tem 9 modelos com IDs `:free` (DeepSeek V4.1 Flash, Kimi K3.1 Pro, GLM 5.3/5.3 Flash, Nemotron 3 Ultra e variantes uncensored). Por padrão o Vaktor usa esse catálogo estático; `NUMES_DYNAMIC_MODELS=true` tenta substituí-lo por `GET /models?output_modalities=text`. Preços USD usam `pricing.*` por token; chaves BTC usam satoshis e são convertidas pelo `reference.usd_per_btc` (com `usd_rates` preferido quando presente). Reasoning vai como `reasoning: { effort }`. Use `numes::autor/modelo` para forçar o provedor quando o ID também existir em outro catálogo.
 >
 > **NightRouter**: gateway OpenAI-compatible em `https://api.nightrouter.ai/v1`. `GET /v1/models` expõe ~54 IDs (Claude, GPT, Gemini, Kimi, GLM, Qwen, DeepSeek e modelos `custom`); só entram os que aceitam `supported_endpoint_types: ["openai"]`. A API não publica preços/contexto, então os custos são estimativas por família (`pricePer1M`). IDs como `gpt-6-luna` podem colidir com outros provedores; use `nightrouter::ID` para selecionar a rota.
 >
@@ -660,7 +594,32 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 >
 > **FreeTheAI (FTA)**: API OpenAI-compatible em `https://api.freetheai.org/v1`, autenticada com `Authorization: Bearer ftai_...`. Catálogo inicial de 5 modelos gratuitos recomendados: `fta/zai/glm-5.3`, `fta/zai/glm-5.3-flash`, `fta/kimi/k3`, `fta/mmx/minimax-m3` e `fta/olf/gpt-oss:120b`.
 
-**Nenhuma configuração extra necessária para ProxyGateLLM!**
+O Groq exige `GROQ_API_KEY`; não há modo gratuito/ilimitado sem chave.
+
+### Status dos provedores (auditoria local)
+
+A tabela abaixo reflete a última auditoria feita neste ambiente. Ela não substitui o teste com a sua chave.
+
+| Provedor | Status |
+|---|---|
+| Puter | `200` |
+| Kilo Code | `200` |
+| Qronos AI | `200` |
+| NVIDIA NIM | `200` (Nemotron 3 Ultra / Lightning) |
+| Zro | `200` em `deepseek-v4.1-flash`; GLM/Dolly/Abyss `403` |
+| UnoRouter | `200` em `gemini-3.5-flash-lite:free` e `k-exaone-2.5:free`; alguns `:free` pedem consentimento |
+| Groq (`proxygatellm`) | `200` em `openai/gpt-oss-120b`; os outros 3 modelos do catálogo não foram confirmados |
+| Numes | catálogo remoto indisponível; usando os 9 modelos free locais |
+| Echo Free | `401` (pool: 19 chaves `401`, 1 `402`) |
+| Vyce AI | `403` (conta não verificada) |
+| DeepAI | texto `402` (exige Pro) |
+| APInex | `402` (saldo/quota) |
+| OpenCode Zen | `410`/`429` |
+| OpenRouter | sem créditos |
+| Gemini | `gemini-2.5` EOL; `gemini-3.8` `503` |
+| Qoder | `ENOTFOUND` |
+
+Provedores sem linha na tabela dependem de chave, cota ou configuração e não foram confirmados na auditoria. Nenhuma chave é exibida aqui.
 
 ### Variáveis do agente
 
@@ -687,7 +646,7 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 | `MEMORY_FILE`             | `VAKTOR.md`  | Nome do arquivo de memória do projeto                 |
 | `SECURITY_ENABLED`        | `false`      | Injeta o perfil `SECURITY.md` no system prompt        |
 | `SECURITY_FILE`           | `SECURITY.md`| Nome do arquivo de perfil de segurança                |
-| `MCP_ENABLED`             | `false`      | Habilita o cliente MCP (tool `mcp_call` + `/mcp`)     |
+| `MCP_ENABLED`             | `false`      | Habilita o cliente MCP (tool `mcp_call`)              |
 | `MCP_SERVERS`             | —            | `nome=stdio cmd args;nome2=http https://url`          |
 | `BEST_OF_N`               | `1`          | Candidatas do Best-of-N na resposta final (1–5)       |
 | `CRITIC_MODEL`            | —            | Modelo do crítico (vazio = modelo ativo)              |
@@ -695,6 +654,19 @@ o Vaktor usa a lista curada de 11 modelos como fallback offline.
 | `ENABLE_DATASET_LOG`      | `false`      | Grava sessões em JSONL local para fine-tuning         |
 
 Valores fora do intervalo são ajustados automaticamente (com aviso na UI).
+
+### Persistência local
+
+| Caminho | Conteúdo |
+|---|---|
+| `~/.local/vaktor.db` | Banco local via `sql.js` com metadados de sessão (IP, machineId, guid, hwid e dados da sessão) |
+| `~/.vaktor/sessions.json` | Sessões da TUI; pode ser trocado com `VAKTOR_SESSIONS_FILE` |
+| `~/.vaktor/orchestrator.json` | Modelos escolhidos para cada papel do orquestrador; pode ser trocado com `VAKTOR_ORCHESTRATOR_FILE` |
+| `~/.vaktor/update.json` | Versão adiada pelo botão `Install later`; pode ser trocado com `VAKTOR_UPDATE_STATE_FILE` |
+| `.vaktor/logs/sessions/AAAA-MM-DD.jsonl` | Coleta opcional para fine-tuning (`ENABLE_DATASET_LOG=true`) |
+| `.vaktor/settings.json` | Configuração do workspace do orquestrador |
+
+O loader aceita `.env` ou, na ausência dele, `.key`. Duplicatas no arquivo seguem a regra “última ocorrência vence”; variáveis já definidas no ambiente do processo têm prioridade.
 
 ---
 
@@ -708,7 +680,7 @@ src/
 │   └── env.ts             # Carregamento e validação do .env
 ├── router/
 │   ├── index.ts           # Roteamento multi-provedor, complete()/send(), config do agente
-│   ├── creditManager.ts   # Gestão de créditos por provedor
+│   ├── creditManager.ts   # Gestão do orçamento global e custos por chamada
 │   └── cache.ts           # Cache de respostas + detecção de triviais
 ├── providers/
 │   ├── adapter.ts          # Despacho unificado (chave por owner, deflexões, streaming)
@@ -718,9 +690,11 @@ src/
 │   ├── agentrouter.ts     # AgentRouter + 5 modelos (co.agentrouter.org/v1)
 │   ├── openrouter.ts      # Integração OpenRouter + 12 modelos curados (multi-turn)
 │   ├── requesty.ts        # Requesty + 13 modelos gratuitos
+│   ├── numes.ts           # Numes + catálogo free local (9 modelos)
+│   ├── nightrouter.ts     # NightRouter + catálogo dinâmico OpenAI-compatible
 │   ├── kilo.ts            # Kilo Code + 17 modelos gratuitos (x-api-key)
 │   ├── fta.ts             # FreeTheAI + 5 modelos gratuitos
-│   ├── proxygatellm.ts    # Integração ProxyGateLLM FREE + 14 modelos ✨
+│   ├── proxygatellm.ts    # Groq (provider interno proxygatellm) + 4 modelos
 │   ├── gemini.ts          # Google Gemini + catálogo dinâmico da chave (API nativa)
 │   ├── notion.ts          # Notion AI + catálogo de agentes e sessões (API beta)
 │   ├── notionWeb.ts       # Notion AI Web + cookie token_v2 e NDJSON interno
@@ -747,7 +721,7 @@ src/
 │   ├── bestofn.ts         # Best-of-N com crítico
 │   └── smoke.ts           # Smoke tests do agente
 ├── tools/
-│   ├── index.ts           # Registro das 13 ferramentas
+│   ├── index.ts           # Registro das 14 ferramentas
 │   ├── fs.ts              # list_dir, read_file, write_file, apply_patch
 │   ├── search.ts          # Busca recursiva em TypeScript puro
 │   ├── shell.ts           # run_command, git_status, git_diff + spawn seguro
@@ -763,13 +737,35 @@ src/
 ├── security/
 │   ├── index.ts           # Perfil de segurança (SECURITY.md), com redação
 │   └── smoke.ts           # Smoke tests do perfil
+├── orchestrator/
+│   ├── index.ts           # Entrada do orquestrador
+│   ├── engine.ts          # Planner + scout + builders + fixer
+│   ├── settings.ts        # Preferências por papel
+│   ├── workspace.ts       # Workspace .vaktor/settings.json
+│   ├── payload.ts         # Montagem do payload de orquestração
+│   ├── api.ts             # Endpoint opcional /orchestrate (NDJSON/SSE)
+│   ├── store.ts           # Estado do orquestrador
+│   ├── types.ts           # Tipos dos papéis e tarefas
+│   └── smoke.ts           # Smoke tests do orquestrador
+├── database/
+│   ├── local.ts           # sql.js em ~/.local/vaktor.db
+│   └── session.ts         # Metadados de sessão
+├── resources/
+│   └── index.ts           # RESOURCES.md injetado no system prompt
+├── vision/
+│   ├── index.ts           # Tipos e helpers de visão
+│   ├── upload.ts          # Upload de arquivos
+│   ├── formatter.ts       # Formatação de conteúdo multimodal
+│   └── chat-integration.ts # Enriquecimento de mensagens (não ligado ao chat)
+├── services/
+│   └── providers/         # Adaptadores auxiliares (DeepAI, VyceAI)
 ├── mcp/                   # Cliente MCP (Model Context Protocol)
 │   ├── types.ts           # JSON-RPC 2.0 + tipos do protocolo MCP
 │   ├── transport.ts       # Base + StdioTransport (spawn sem shell, env seguro)
 │   ├── http.ts            # HttpTransport (https-only, anti-SSRF, SSE)
 │   ├── client.ts          # McpClient: handshake, descoberta, roots, progresso
 │   ├── security.ts        # Heurística destrutiva, confirmação, sanitização
-│   ├── bridge.ts          # mcp_call + contexto + comando /mcp
+│   ├── bridge.ts          # mcp_call + contexto (a UI legada expõe /mcp)
 │   ├── config.ts          # Parser de MCP_ENABLED / MCP_SERVERS
 │   └── smoke.ts           # 40 testes offline (servidor mock + fetch fake)
 ├── dataset/
@@ -795,44 +791,66 @@ src/
 │   ├── controller.ts      # TuiController + listAllModels (fake para testes)
 │   ├── sessions.ts        # Persistência local de sessões em ~/.vaktor/sessions.json
 │   ├── sound.ts           # Cues minimalistas de abrir/fechar menus
-│   ├── components/        # Header, MessageList, InputBar, StatusBar, ModelMenu
+│   ├── components/        # Header, MessageList, InputBar, StatusBar, ModelMenu, UpdateNotice
 │   └── smoke.tsx          # Smoke headless (testRender, 25 verificações)
+├── update/
+│   └── index.ts           # Checagem de versão e instalação de atualização
 ├── thinking/              # Classificação, plano e parsing de raciocínio
 ├── skills/                # Skills embutidas e seleção
 └── types/
     └── index.ts           # Tipos compartilhados (tipagem estrita)
 
 scripts/
-└── export-dataset.ts      # Exporta .vaktor/logs/sessions para JSONL de chat
+├── export-dataset.ts      # Exporta .vaktor/logs/sessions para JSONL de chat
+├── echo-pool-test.ts      # Testa o pool de chaves do Echo
+├── import-curl.mjs        # Importa requisições cURL
+└── notion-*.mjs           # Auxiliares de login/cookie do Notion
 
 docs/
-└── FINE-TUNING.md         # Guia de coleta/exportação/treino
+├── ECHO-FREE.md           # Detalhes do provider Echo Free
+├── ECHO-POOL.md           # Pool e rotação de chaves do Echo
+├── ECHO-SETUP.md          # Setup do Echo
+├── FINE-TUNING.md         # Coleta/exportação/treino
+└── MCP-INTEGRACAO.md      # Integração do cliente MCP
 ```
 
 ### Scripts npm
 
-| Script             | Descrição                                             |
-|--------------------|-------------------------------------------------------|
-| `npm run dev`      | Roda a TUI lendo direto de `src/` (tsx)               |
-| `npm run build`    | Compila o TypeScript                                  |
-| `npm run typecheck`| Checagem de tipos sem emitir                          |
-| `npm run smoke`    | Roda todos os smoke tests (thinking, tools, contexto, memória, segurança, ui, mcp, agente, providers, tui) |
-| `npm run smoke:security` | Apenas os smoke tests do perfil de segurança   |
-| `npm run smoke:ui` | Apenas os smoke tests da exibição de eventos do agente        |
-| `npm run smoke:mcp` | Apenas os smoke tests do cliente MCP (40 testes offline)     |
-| `npm run smoke:agent` | Apenas os smoke tests do agente                    |
-| `npm run smoke:providers` | Apenas Echo Free + Gemini + Notion + Notion Web + Itera + DeepAI Code + pulso neon (231 testes offline) |
-| `npm run smoke:tui` | Smoke headless da TUI Solid/OpenTUI (streaming, cancelamento, menu) |
-| `npm run export:dataset` | Exporta o dataset de fine-tuning              |
+| Script | Descrição |
+|---|---|
+| `npm run dev` | Roda a TUI lendo direto de `src/` (tsx) |
+| `npm run build` | Compila o backend Node e a TUI (`build:node` + `build:tui`) |
+| `npm run build:node` | Compila apenas o TypeScript do backend |
+| `npm run build:tui` | Compila apenas a TUI Solid/OpenTUI com Babel |
+| `npm start` | Roda `dist/index.js` com `node --experimental-ffi` |
+| `npm run typecheck` | Checagem de tipos do backend e da TUI sem emitir |
+| `npm run smoke` | Roda todos os smoke tests |
+| `npm run smoke:thinking` | Motor de raciocínio |
+| `npm run smoke:tools` | Ferramentas do agente |
+| `npm run smoke:context` | Repo map e orçamento de contexto |
+| `npm run smoke:memory` | Memória do projeto |
+| `npm run smoke:security` | Perfil de segurança |
+| `npm run smoke:ui` | Eventos da UI Ink legada |
+| `npm run smoke:mcp` | Cliente MCP (testes offline) |
+| `npm run smoke:orchestrator` | Orquestrador |
+| `npm run smoke:agent` | Loop do agente |
+| `npm run smoke:providers` | Provedores, credenciais e catálogo |
+| `npm run smoke:combo` | Combo ponderado e orçamento |
+| `npm run smoke:database` | Banco local |
+| `npm run smoke:vision` | Módulo de visão |
+| `npm run smoke:upload` | Upload de arquivos |
+| `npm run smoke:formatter` | Formatação multimodal |
+| `npm run smoke:tui` | TUI Solid/OpenTUI headless |
+| `npm run export:dataset` | Exporta o dataset de fine-tuning |
 
 ---
 
 ## Decisões de design
 
-- **Multi-provedor com fallback inteligente**: Cada provedor tem orçamento independente. Quando esgota, router muda automaticamente para o próximo. ProxyGateLLM FREE é o último recurso ilimitado.
-- **Roteamento automático por categoria**: Prompts de código → Claude Opus, triviais → Claude Haiku, raciocínio → GPT-4o (via auto-routing quando no modo "auto").
+- **Multi-provedor com fallback free-first**: o orçamento é global (`CREDIT_BUDGET_USD`). Quando ele acaba, o router tenta os modelos gratuitos primeiro e depois a cadeia fixa; erros de API só trocam de modelo com `AUTO_FALLBACK=true` no modo auto.
+- **Roteamento auto**: no modo auto, prioriza modelos gratuitos com credencial disponível (`qronos`, `unorouter`, `kilo`); prompts triviais usam `kilo::kilo-auto/free`.
 - **Estimativa de tokens**: A contagem usa `chars/4` como heurística. Para precisão, considere adicionar `tiktoken` ou `anthropic-tokenizer`.
-- **Cache em memória**: Adequado para sessões de terminal. Para persistência entre sessões, adicionar SQLite ou arquivo JSON.
+- **Cache em memória**: Adequado para sessões de terminal. O cache não persiste entre execuções; as sessões da TUI ficam em `~/.vaktor/sessions.json` e os metadados no banco local.
 - **Agente como modo separado**: o chat continua usando `router.send()` (skills, thinking, cache, truncamento). O agente usa `router.complete()` diretamente, que é o único ponto de chamada aos provedores.
 - **Protocolo textual de tools**: `<tool_call>{...}</tool_call>` com JSON em uma linha, 1–4 por resposta. Nada é executado antes de validar nome, JSON e tipos dos argumentos.
 - **Allowlist, não shell**: o modelo escolhe um `label`, nunca o binário. No Windows, `npm`/`npx` são resolvidos para `node <npm-cli.js>` com `shell: false` para evitar o `EINVAL` do `.cmd`.

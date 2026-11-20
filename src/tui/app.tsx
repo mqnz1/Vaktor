@@ -25,6 +25,15 @@ import { SKILLS } from '../skills/index.js';
 import { listFreeModels } from '../providers/catalog.js';
 import { formatThinkingStatus, parseThinkingCommand } from '../thinking/index.js';
 import {
+  checkForUpdate,
+  dismissUpdate,
+  installVaktorUpdate,
+  isUpdateDismissed,
+  updateCheckEnabled,
+  updateCheckIntervalMs,
+  type UpdateInfo,
+} from '../update/index.js';
+import {
   buildOrchestrationPayload,
   createVaktorApi,
   ensureVaktorWorkspace,
@@ -40,6 +49,7 @@ import { Header } from './components/header.js';
 import { MessageList, type ChatEntry } from './components/message-list.js';
 import { InputBar } from './components/input-bar.js';
 import { StatusBar } from './components/status-bar.js';
+import { UpdateNotice } from './components/update-notice.js';
 import { ModelMenu } from './components/model-menu.js';
 import { OrchestratorMenu } from './components/orchestrator-menu.js';
 import { CommandList } from './components/command-list.js';
@@ -141,6 +151,8 @@ export function App(props: AppProps) {
   const [sessionsOpen, setSessionsOpen] = createSignal(false);
   const [sessionsList, setSessionsList] = createSignal<StoredSession[]>([]);
   const [notice, setNotice] = createSignal<string | null>(null);
+  const [updateInfo, setUpdateInfo] = createSignal<UpdateInfo | null>(null);
+  const [updateInstalling, setUpdateInstalling] = createSignal(false);
   const [suggestionIndex, setSuggestionIndex] = createSignal(0);
   const [spin, setSpin] = createSignal(0);
   const [contextMenu, setContextMenu] = createSignal<ContextMenuState | null>(null);
@@ -155,6 +167,7 @@ export function App(props: AppProps) {
   let lastCtrlC = 0;
   let lastEscape = 0;
   let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+  let updateCheckInFlight = false;
   let currentAbort: AbortController | null = null;
   let currentSessionId: string | null = null;
   let overlayWasOpen = false;
@@ -204,6 +217,53 @@ export function App(props: AppProps) {
     setNotice(message);
     if (noticeTimer) clearTimeout(noticeTimer);
     noticeTimer = setTimeout(() => setNotice(null), 3000);
+  }
+
+  async function refreshUpdate(): Promise<void> {
+    if (updateCheckInFlight || !updateCheckEnabled()) return;
+    updateCheckInFlight = true;
+    try {
+      const info = await checkForUpdate();
+      if (!info || isUpdateDismissed(info.latestVersion)) return;
+      setUpdateInfo(info);
+    } finally {
+      updateCheckInFlight = false;
+    }
+  }
+
+  function postponeUpdate(): void {
+    const info = updateInfo();
+    if (info) dismissUpdate(info.latestVersion);
+    setUpdateInfo(null);
+    showToast('Atualização adiada');
+  }
+
+  async function installUpdate(): Promise<void> {
+    const info = updateInfo();
+    if (!info || updateInstalling()) return;
+    if (busy()) {
+      showToast('Aguarde a operação atual');
+      return;
+    }
+    setUpdateInstalling(true);
+    showToast(`Instalando Vaktor ${info.latestVersion}...`);
+    const result = await installVaktorUpdate();
+    setUpdateInstalling(false);
+    if (result.ok) {
+      setUpdateInfo(null);
+      showToast('Atualização instalada. Reinicie o Vaktor.');
+      return;
+    }
+    showToast(`Falha ao atualizar: ${result.error ?? 'erro desconhecido'}`);
+  }
+
+  if (updateCheckEnabled()) {
+    void refreshUpdate();
+    const updateTimer = setInterval(() => {
+      void refreshUpdate();
+    }, updateCheckIntervalMs());
+    updateTimer.unref();
+    onCleanup(() => clearInterval(updateTimer));
   }
 
   function createConfirmFn() {
@@ -1153,6 +1213,18 @@ export function App(props: AppProps) {
       <Header
         width={dims().width}
       />
+      <Show when={updateInfo()}>
+        {(info: () => UpdateInfo) => (
+          <UpdateNotice
+            version={info().latestVersion}
+            installing={updateInstalling()}
+            onInstall={() => {
+              void installUpdate();
+            }}
+            onLater={postponeUpdate}
+          />
+        )}
+      </Show>
       <MessageList
         messages={messages()}
         spinner={spinnerFrame()}

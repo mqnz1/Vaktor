@@ -19,6 +19,7 @@ process.env.VAKTOR_SESSIONS_FILE = join(
   'sessions.json',
 );
 process.env.VAKTOR_SOUND = 'off';
+process.env.VAKTOR_UPDATE_CHECK = 'off';
 
 function fakeState(overrides?: Partial<RouterState>): RouterState {
   return {
@@ -193,7 +194,7 @@ try {
   const frame0 = setup.captureCharFrame();
   check('logo V visível', frame0.includes('██      ██') && frame0.includes('▀██▀'));
   check('wordmark aktor visível', frame0.includes('aktor'));
-  check('versão pequena no header', frame0.includes('v2.0.27'));
+  check('versão pequena no header', frame0.includes('v2.0.28'));
   check('sombra quadrada removida do V', !frame0.includes('▄▄▄▄'));
   const puterModels = listAllModels().filter(model => model.provider === 'puter');
   check('catálogo Puter completo no menu', puterModels.length === PUTER_MODELS.length);

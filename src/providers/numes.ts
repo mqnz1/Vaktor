@@ -56,15 +56,71 @@ function model(
 }
 
 export const NUMES_MODELS: NumesModel[] = [
-  model('openai/gpt-6-luna', 'GPT-6 Luna', 0.07, 0.38, 131072, 'Numes · generalista econômico'),
-  model('openai/gpt-6-astra', 'GPT-6 Astra', 0.46, 1.54, 131072, 'Numes · OpenAI de alta capacidade'),
-  model('anthropic/claude-sonnet-5', 'Claude Sonnet 5', 2.4, 12, 200000, 'Numes · código e agentes'),
-  model('anthropic/claude-opus-5', 'Claude Opus 5', 6, 30, 200000, 'Numes · raciocínio mais profundo'),
-  model('google/gemini-3.8-flash', 'Gemini 3.8 Flash', 0.03, 0.13, 1000000, 'Numes · rápido e barato'),
-  model('moonshotai/kimi-k3', 'Kimi K3', 0.03, 0.15, 256000, 'Numes · raciocínio e código'),
-  model('z-ai/glm-5.3', 'GLM 5.3', 0.15, 0.8, 128000, 'Numes · MoE para agentes'),
-  model('alibaba/qwen3.8-max', 'Qwen 3.8 Max', 0.08, 0.08, 128000, 'Numes · multilíngue'),
-  model('deepseek/deepseek-v4.1-flash', 'DeepSeek V4.1 Flash', 0.0038, 0.0038, 128000, 'Numes · econômico'),
+  model(
+    'deepseek/deepseek-v4.1-flash:free',
+    'DeepSeek V4.1 Flash',
+    0,
+    0,
+    1_048_576,
+    'Alta velocidade (~140 tok/s) e bom equilíbrio geral.',
+  ),
+  model(
+    'dealignai/deepseek-v4.1-flash-uncensored-fp8:free',
+    'DeepSeek V4.1 Flash Uncensored FP8',
+    0,
+    0,
+    1_048_576,
+    'Variante sem filtros (DealignAI) em FP8.',
+  ),
+  model(
+    'moonshotai/kimi-k3.1-pro:free',
+    'Kimi K3.1 Pro',
+    0,
+    0,
+    1_048_576,
+    'Modelo flagship da Moonshot AI.',
+  ),
+  model(
+    'uniboshi/kimi-k3-abliterated-v1:free',
+    'Kimi K3 Abliterated',
+    0,
+    0,
+    1_048_576,
+    'Versão sem recusas/censura do Kimi K3.',
+  ),
+  model('z-ai/glm-5.3:free', 'GLM 5.3', 0, 0, 262_144, 'Modelo base da Z.ai.'),
+  model(
+    'z-ai/glm-5.3-flash:free',
+    'GLM 5.3 Flash',
+    0,
+    0,
+    1_048_576,
+    'Versão mais leve e rápida da família GLM 5.3.',
+  ),
+  model(
+    'dealignai/glm-5.3-uncensored-fp8:free',
+    'GLM 5.3 Uncensored FP8',
+    0,
+    0,
+    0,
+    'Variante sem filtros do GLM 5.3.',
+  ),
+  model(
+    'dealignai/glm-5.3-flash-uncensored-fp8:free',
+    'GLM 5.3 Flash Uncensored FP8',
+    0,
+    0,
+    1_048_576,
+    'Variante sem filtros do GLM 5.3 Flash.',
+  ),
+  model(
+    'nvidia/nemotron-3-ultra-550b-a55b:free',
+    'Nemotron 3 Ultra',
+    0,
+    0,
+    202_800,
+    'MoE da NVIDIA (550B total / 55B ativos), ótimo para raciocínio e código.',
+  ),
 ];
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -157,7 +213,8 @@ export function getNumesModelById(id: string): NumesModel | undefined {
 }
 
 export function numesDynamicEnabled(): boolean {
-  return (process.env['NUMES_DYNAMIC_MODELS'] ?? 'true').toLowerCase() !== 'false';
+  const value = (process.env['NUMES_DYNAMIC_MODELS'] ?? 'false').trim().toLowerCase();
+  return value === 'true' || value === '1' || value === 'on';
 }
 
 export async function loadNumesCatalog(

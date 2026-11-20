@@ -73,6 +73,9 @@ if not exist ".env" (
   >> ".env" echo.
   >> ".env" echo REQUESTY_API_KEY=
   >> ".env" echo.
+  >> ".env" echo NUMES_API_KEY=
+  >> ".env" echo NUMES_DYNAMIC_MODELS=false
+  >> ".env" echo.
   >> ".env" echo KILO_API_KEY=
   >> ".env" echo.
   >> ".env" echo FTAI_API_KEY=
