@@ -3,7 +3,15 @@
 // possa ser testada headless com um fake (ver smoke.tsx).
 // =============================================================
 import type { AIRouter } from '../router/index.js';
-import type { AppMode, ChatMessage, CompleteOptions, ReasoningPart, RouterState } from '../types/index.js';
+import type {
+  AgentRunSummary,
+  AppMode,
+  ChatMessage,
+  CompleteOptions,
+  ReasoningPart,
+  RouterState,
+} from '../types/index.js';
+import type { AgentEvent } from '../agent/types.js';
 import { ownerOf, providerLabel } from '../providers/registry.js';
 import {
   listRankedModels,
@@ -37,6 +45,7 @@ export interface TuiSendResult {
   outputTokens: number;
   estimatedCostUsd: number;
   fromCache: boolean;
+  agent?: AgentRunSummary;
 }
 
 export interface TuiSendOpts {
@@ -47,6 +56,8 @@ export interface TuiSendOpts {
   onToken?: (chunk: string) => void;
   /** Streaming parcial de raciocínio (quando o provedor suporta). */
   onReasoningToken?: (chunk: string) => void;
+  /** Eventos do agente (ferramentas, verificação, reparo) em tempo real. */
+  onAgentEvent?: (event: AgentEvent) => void;
 }
 
 export interface TuiController {
@@ -132,6 +143,7 @@ export class RouterController implements TuiController {
       ...(opts?.signal ? { signal: opts.signal } : {}),
       ...(opts?.onToken ? { onToken: opts.onToken } : {}),
       ...(opts?.onReasoningToken ? { onReasoningToken: opts.onReasoningToken } : {}),
+      ...(opts?.onAgentEvent ? { onAgentEvent: opts.onAgentEvent } : {}),
     });
     return {
       text: res.text,
@@ -143,6 +155,7 @@ export class RouterController implements TuiController {
       outputTokens: res.outputTokens,
       estimatedCostUsd: res.estimatedCostUsd,
       fromCache: res.fromCache,
+      ...(res.agent ? { agent: res.agent } : {}),
     };
   }
 
@@ -161,6 +174,7 @@ export class RouterController implements TuiController {
       outputTokens: res.outputTokens,
       estimatedCostUsd: res.estimatedCostUsd,
       fromCache: res.fromCache,
+      ...(res.agent ? { agent: res.agent } : {}),
     };
   }
 

@@ -37,6 +37,16 @@ const ANTHROPIC_VERSION = '2023-06-01';
 // Modelos de raciocínio: max_completion_tokens (não max_tokens) e sem temperature
 const REASONING_RE = /^(gpt-5|o[1-9])/;
 
+// A API Anthropic passou a recusar `temperature` para modelos mais novos.
+// O retry cobre modelos futuros que também rejeitem o parâmetro.
+const ANTHROPIC_NO_TEMPERATURE_RE = /^claude-opus-4-8(?:$|[-.])/i;
+
+function anthropicRejectsTemperature(error: unknown): boolean {
+  return error instanceof EchoError
+    && error.status === 400
+    && /temperature.*deprecated|deprecated.*temperature/i.test(error.detail || error.message);
+}
+
 function model(
   id: string,
   name: string,
@@ -334,17 +344,36 @@ async function viaAnthropicMessages(
   modelInfo: ModelInfo,
   signal?: AbortSignal,
 ): Promise<RouterResponse> {
-  const body: Record<string, unknown> = {
+  const buildBody = (includeTemperature: boolean): Record<string, unknown> => ({
     model,
     max_tokens: maxTokens,
     messages: parts.conversation,
-    temperature,
+    ...(includeTemperature ? { temperature } : {}),
     ...(parts.systemPrompt ? { system: parts.systemPrompt } : {}),
-  };
-
-  const data = await postEcho('anthropic', '/v1/messages', body, apiKey, signal, {
-    'anthropic-version': ANTHROPIC_VERSION,
   });
+
+  const includeTemperature = !ANTHROPIC_NO_TEMPERATURE_RE.test(model);
+  let data: Record<string, unknown>;
+  try {
+    data = await postEcho(
+      'anthropic',
+      '/v1/messages',
+      buildBody(includeTemperature),
+      apiKey,
+      signal,
+      { 'anthropic-version': ANTHROPIC_VERSION },
+    );
+  } catch (error) {
+    if (!includeTemperature || !anthropicRejectsTemperature(error)) throw error;
+    data = await postEcho(
+      'anthropic',
+      '/v1/messages',
+      buildBody(false),
+      apiKey,
+      signal,
+      { 'anthropic-version': ANTHROPIC_VERSION },
+    );
+  }
   const content = extractAnthropicText(data);
   const usage = asRecord(data['usage']);
   const inputTokens = Number(usage['input_tokens']) || estimateTokens(parts.systemPrompt + JSON.stringify(parts.conversation));

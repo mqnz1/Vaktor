@@ -236,6 +236,8 @@ export function loadConfig(): AppConfig {
     getEnv('OPENROUTER_API_KEY') ||
     getEnv('NUMES_API_KEY') ||
     getEnv('NIGHTROUTER_API_KEY') ||
+    getEnv('NIGHTROUTER_API_KEYS') ||
+    getEnv('NIGHTROUTER_API_KEY_POOL') ||
     getEnv('AGENTROUTER_API_KEY') ||
     getEnv('REQUESTY_API_KEY') ||
     getEnv('KILO_API_KEY') ||

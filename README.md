@@ -8,7 +8,7 @@
 
 O Vaktor é um roteador de modelos para terminal. Ele mantém um catálogo unificado de provedores, prioriza modelos gratuitos quando disponíveis e usa fallback por orçamento e por erro de API.
 
-- **TUI padrão:** Solid/OpenTUI (`src/tui`), com streaming, cancelamento e persistência de sessões.
+- **TUI padrão:** Solid/OpenTUI (`src/tui`), com streaming, cancelamento, persistência de sessões e atividade do agente em tempo real (Read/Edit/Bash/Verify, diff viewer e resumo final).
 - **UI legada:** Ink (`VAKTOR_UI=ink`).
 - **Provedores:** 24 no registry (`src/providers/registry.ts`): Puter, Groq, Qronos, Zro, UnoRouter, Kilo, NVIDIA, Gemini, Notion, Notion Web, Echo, OpenRouter, Requesty, FreeTheAI, NightRouter, Numes, APInex, DeepAI, VyceAI, Qoder, Token Harbor, OpenCode Zen, Itera Compute e AgentRouter.
 - **Fallback:** modelos grátis primeiro; depois a cadeia fixa `nvidia/nemotron-3.5-lightning-30b-a3b` → `zro::deepseek-v4.1-flash` → `glm-5.3-flash` → `kilo-auto/free` → `k-exaone-2.5:free`.
@@ -482,12 +482,14 @@ Não é gratuito nem ilimitado. Os custos estimados por token ficam em `src/prov
 | `NUMES_API_KEY`          | —           | Chave Numes (`api.numes.ai/api/v1`)            |
 | `NUMES_DYNAMIC_MODELS`   | `false`     | Usa o catálogo remoto do Numes; o padrão é o catálogo free local |
 | `NIGHTROUTER_API_KEY`    | —           | Chave NightRouter (`api.nightrouter.ai/v1`)    |
+| `NIGHTROUTER_API_KEY_POOL` | -         | Pool NightRouter separado por vírgula, ponto e vírgula ou espaço |
+| `NIGHTROUTER_API_KEYS`   | -           | Alias de `NIGHTROUTER_API_KEY_POOL`            |
 | `REQUESTY_API_KEY`       | —           | Chave Requesty (`rqsty_...`)                   |
 | `KILO_API_KEY`           | —           | Chave Kilo Code (JWT; enviada via `x-api-key`) |
 | `FTAI_API_KEY`           | —           | Chave FreeTheAI (`ftai_...`)                   |
 | `GROQ_API_KEY`           | —           | Chave Groq (provider interno `proxygatellm`)   |
 | `ECHO_API_KEY`           | —           | Chave Echo Free (`echo_...`, roteador multi-IA) |
-| `ECHO_API_KEY_POOL`      | -           | Pool de chaves Echo separado por vírgula       |
+| `ECHO_API_KEY_POOL`      | -           | Pool de chaves Echo separado por vírgula, ponto e vírgula ou espaço |
 | `NVIDIA_API_KEY`         | —           | Chave NVIDIA NIM (`nvapi-...`)                  |
 | `OPENCODE_API_KEY`       | —           | Chave OpenCode Zen (`oc_...`)                   |
 | `HARBOR_API_KEY`         | —           | Chave Token Harbor (`thk_live_...`)             |
@@ -580,7 +582,7 @@ Quando o repositório público tiver uma release, tag ou `package.json` com vers
 > | OpenAI | `POST /chat/completions` | fallback `POST /responses` só quando o modelo exige |
 > | Gemini | `POST /v1beta/models/{model}:generateContent` | `contents`/`generationConfig` |
 >
-> `echo.merit.systems/api/*` é o site (responde 404 HTML) e `/v1/chat/completions` não existe no router. O runtime de credencial vive em `src/providers/extract.ts`: **bootstrap único por chave** (avisa a UI uma vez: `Echo Free autenticado · echo_75e…411a`), **retry limitado** só em 429/5xx/rede respeitando `Retry-After`, **nenhum retry** em 401/402/403/404/422, **cooldown** após falha final (evita loop de autenticação) e **redação de segredos** em toda mensagem de erro. O `401` repassado do upstream OpenAI vira `upstream-auth` (não culpa `ECHO_API_KEY`, não entra em cooldown) e o `429` de spend cap vira `quota` (sem retry). Não existe refresh automático (`ECHO_SUPPORTS_REFRESH = false`) porque o Echo não publica endpoint oficial para isso. Detalhes da consolidação dos scripts antigos: `docs/ECHO-FREE.md`.
+> `echo.merit.systems/api/*` é o site (responde 404 HTML) e `/v1/chat/completions` não existe no router. O runtime de credencial vive em `src/providers/extract.ts`: **bootstrap único por chave** (avisa a UI uma vez: `Echo Free autenticado · echo_75e…411a`), **retry limitado** só em 429/5xx/rede respeitando `Retry-After`, **nenhum retry** em 401/402/403/404/422, **cooldown** após falha final (evita loop de autenticação) e **redação de segredos** em toda mensagem de erro. O `401` repassado do upstream OpenAI vira `upstream-auth` (não culpa `ECHO_API_KEY`, não entra em cooldown) e o `429` de spend cap vira `quota` (sem retry). Modelos `claude-opus-4-8` não aceitam `temperature`; o provider omite o campo e repete uma vez se o upstream ainda retornar `400` de depreciação. O pool em `ECHO_API_KEY_POOL` usa round-robin com cooldown por chave. Não existe refresh automático (`ECHO_SUPPORTS_REFRESH = false`) porque o Echo não publica endpoint oficial para isso. Detalhes da consolidação dos scripts antigos: `docs/ECHO-FREE.md`.
 
 > **AgentRouter**: API OpenAI-compatible em `https://co.agentrouter.org/v1` (Anthropic sem `/v1`). Catálogo do portal: `claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6`, `gpt-5.5` e `glm-5.2`. A chave `AGENTROUTER_API_KEY` é a mesma para todos os agentes.
 >
@@ -588,7 +590,7 @@ Quando o repositório público tiver uma release, tag ou `package.json` com vers
 >
 > **Numes**: marketplace OpenAI-compatible em `https://api.numes.ai/api/v1` com IDs `autor/modelo`. O catálogo free local tem 9 modelos com IDs `:free` (DeepSeek V4.1 Flash, Kimi K3.1 Pro, GLM 5.3/5.3 Flash, Nemotron 3 Ultra e variantes uncensored). Por padrão o Vaktor usa esse catálogo estático; `NUMES_DYNAMIC_MODELS=true` tenta substituí-lo por `GET /models?output_modalities=text`. Preços USD usam `pricing.*` por token; chaves BTC usam satoshis e são convertidas pelo `reference.usd_per_btc` (com `usd_rates` preferido quando presente). Reasoning vai como `reasoning: { effort }`. Use `numes::autor/modelo` para forçar o provedor quando o ID também existir em outro catálogo.
 >
-> **NightRouter**: gateway OpenAI-compatible em `https://api.nightrouter.ai/v1`. `GET /v1/models` expõe ~54 IDs (Claude, GPT, Gemini, Kimi, GLM, Qwen, DeepSeek e modelos `custom`); só entram os que aceitam `supported_endpoint_types: ["openai"]`. A API não publica preços/contexto, então os custos são estimativas por família (`pricePer1M`). IDs como `gpt-6-luna` podem colidir com outros provedores; use `nightrouter::ID` para selecionar a rota.
+> **NightRouter**: gateway OpenAI-compatible em `https://api.nightrouter.ai/v1`. `GET /v1/models` expõe ~54 IDs (Claude, GPT, Gemini, Kimi, GLM, Qwen, DeepSeek e modelos `custom`); só entram os que aceitam `supported_endpoint_types: ["openai"]`. A API não publica preços/contexto, então os custos são estimativas por família (`pricePer1M`). IDs como `gpt-6-luna` podem colidir com outros provedores; use `nightrouter::ID` para selecionar a rota. Aceita pool em `NIGHTROUTER_API_KEY_POOL` (ou `NIGHTROUTER_API_KEYS`) com rotação round-robin, cooldown de 60 s por chave e failover em `401`/`402`/`403`/`429`; sem retry depois que o streaming já emitiu tokens.
 >
 > **Kilo Code**: gateway OpenAI-compatible em `https://ai-gateway.kilo.ai/api/v1`. O gateway autentica com **`x-api-key`**, não com `Authorization: Bearer`. Catálogo: 17 modelos com `isFree=true` no endpoint público `/api/v1/models`.
 >

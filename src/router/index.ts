@@ -23,6 +23,7 @@ import { loadUnoRouterCatalog, unorouterDynamicEnabled } from '../providers/unor
 import {
   loadNightRouterCatalog,
   nightRouterDynamicEnabled,
+  nightRouterPrimaryKey,
 } from '../providers/nightrouter.js';
 import { geminiDynamicEnabled, loadGeminiCatalog } from '../providers/gemini.js';
 import { loadNotionCatalog, notionDynamicEnabled } from '../providers/notion.js';
@@ -215,7 +216,7 @@ export class AIRouter {
       }
     }
 
-    const nightRouterApiKey = process.env['NIGHTROUTER_API_KEY']?.trim() ?? '';
+    const nightRouterApiKey = nightRouterPrimaryKey();
     if (nightRouterApiKey) {
       const count = await loadNightRouterCatalog(nightRouterApiKey);
       if (count === 0 && nightRouterDynamicEnabled()) {
@@ -931,7 +932,7 @@ export class AIRouter {
   async send(
     messages: ChatMessage[],
     skipCache = false,
-    streaming: Pick<CompleteOptions, 'signal' | 'onToken' | 'onReasoningToken'> = {},
+    streaming: Pick<CompleteOptions, 'signal' | 'onToken' | 'onReasoningToken' | 'onAgentEvent'> = {},
   ): Promise<RouterResponse> {
     const agentMode = this.state.appMode === 'code' && this.config.agent.enabled;
     const budgeted = agentMode ? messages : await this.prepareChatContext(messages);
@@ -1021,6 +1022,7 @@ export class AIRouter {
             ...(options.signal ? { signal: options.signal } : {}),
             ...(options.onToken ? { onToken: options.onToken } : {}),
             onEvent: (event: AgentEvent) => {
+              options.onAgentEvent?.(event);
               if (event.type === 'tool_end') {
                 this.onNotification?.(
                   `✓ ${event.name}: ${event.preview?.slice(0, 100) || 'ok'}`,

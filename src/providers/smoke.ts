@@ -3,7 +3,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ECHO_MODELS } from './echo.js';
+import { ECHO_MODELS, sendToEcho } from './echo.js';
 import {
   ECHO_HUNTER_PROVENANCE,
   ECHO_SUPPORTS_REFRESH,
@@ -101,6 +101,7 @@ import { NUMES_MODELS, mapNumesCatalog, sendToNumes } from './numes.js';
 import {
   NIGHTROUTER_MODELS,
   mapNightRouterCatalog,
+  resetNightRouterKeyPool,
   sendToNightRouter,
 } from './nightrouter.js';
 import { sendOpenAiCompatible } from './openaiCompat.js';
@@ -1496,6 +1497,114 @@ async function main(): Promise<void> {
       check('NightRouter retorna texto e reasoning', night.text === 'ok' && night.reasoning === 'pensei');
     } finally {
       globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    const originalFetch = globalThis.fetch;
+    const originalPool = process.env['NIGHTROUTER_API_KEYS'];
+    process.env['NIGHTROUTER_API_KEYS'] = 'sk-night-pool-2';
+    resetNightRouterKeyPool();
+    const usedKeys: string[] = [];
+    globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+      const auth = new Headers(init?.headers).get('Authorization') ?? '';
+      usedKeys.push(auth.replace(/^Bearer\s+/, ''));
+      if (usedKeys.length === 1) {
+        return new Response(JSON.stringify({ error: { message: 'invalid key' } }), { status: 401 });
+      }
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: 'pool ok' } }],
+        usage: { prompt_tokens: 2, completion_tokens: 2 },
+      }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const res = await sendToNightRouter(
+        [{ role: 'user', content: 'oi', timestamp: 1 }],
+        'gpt-6-luna',
+        128,
+        'sk-night-pool-1',
+      );
+      check('NightRouter rotaciona key em 401', usedKeys.length === 2 && res.text === 'pool ok');
+      check(
+        'NightRouter usa a segunda chave do pool',
+        usedKeys[0] === 'sk-night-pool-1' && usedKeys[1] === 'sk-night-pool-2',
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalPool === undefined) delete process.env['NIGHTROUTER_API_KEYS'];
+      else process.env['NIGHTROUTER_API_KEYS'] = originalPool;
+      resetNightRouterKeyPool();
+    }
+  }
+
+  {
+    const originalFetch = globalThis.fetch;
+    const originalPool = process.env['NIGHTROUTER_API_KEYS'];
+    process.env['NIGHTROUTER_API_KEYS'] = 'sk-round-2,sk-round-3';
+    resetNightRouterKeyPool();
+    const usedKeys: string[] = [];
+    globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+      const auth = new Headers(init?.headers).get('Authorization') ?? '';
+      usedKeys.push(auth.replace(/^Bearer\s+/, ''));
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: 'round ok' } }],
+        usage: { prompt_tokens: 2, completion_tokens: 2 },
+      }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      await sendToNightRouter(
+        [{ role: 'user', content: 'oi', timestamp: 1 }],
+        'gpt-6-luna',
+        128,
+        'sk-round-1',
+      );
+      await sendToNightRouter(
+        [{ role: 'user', content: 'oi', timestamp: 1 }],
+        'gpt-6-luna',
+        128,
+        'sk-round-1',
+      );
+      check(
+        'NightRouter faz round-robin entre chamadas',
+        usedKeys[0] === 'sk-round-1' && usedKeys[1] === 'sk-round-2',
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalPool === undefined) delete process.env['NIGHTROUTER_API_KEYS'];
+      else process.env['NIGHTROUTER_API_KEYS'] = originalPool;
+      resetNightRouterKeyPool();
+    }
+  }
+
+  {
+    const originalFetch = globalThis.fetch;
+    let body: Record<string, unknown> = {};
+    let url = '';
+    globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+      url = String(input);
+      body = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+      return new Response(JSON.stringify({
+        content: [{ type: 'text', text: 'ok' }],
+        usage: { input_tokens: 2, output_tokens: 2 },
+      }), { status: 200 });
+    }) as typeof fetch;
+    resetEchoBoot();
+    resetEchoGuard();
+    try {
+      const res = await sendToEcho(
+        [{ role: 'user', content: 'oi', timestamp: 1 }],
+        'claude-opus-4-8',
+        128,
+        SAMPLE_KEY,
+        false,
+        0.3,
+      );
+      check('Echo Opus 4.8 usa /v1/messages', url.endsWith('/v1/messages') && res.text === 'ok');
+      check('Echo Opus 4.8 omite temperature', !('temperature' in body));
+    } finally {
+      globalThis.fetch = originalFetch;
+      resetEchoBoot();
+      resetEchoGuard();
     }
   }
 

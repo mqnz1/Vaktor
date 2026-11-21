@@ -4,6 +4,7 @@
 import type { ProviderId, ThinkingConfig, ThinkingMode } from '../thinking/index.js';
 import type { McpServerConfig } from '../mcp/types.js';
 import type { ComboConfig } from '../router/combo.js';
+import type { AgentEvent } from '../agent/types.js';
 
 export type ChatRole = 'user' | 'assistant' | 'system' | 'tool';
 
@@ -202,6 +203,8 @@ export interface CompleteOptions {
   onToken?: (chunk: string) => void;
   /** Streaming parcial de raciocínio (reasoning-delta do provedor). */
   onReasoningToken?: (chunk: string) => void;
+  /** Eventos do agente (ferramentas, verificação, reparo) em tempo real. */
+  onAgentEvent?: (event: AgentEvent) => void;
   /** Função de confirmação para ações irreversíveis do agente. */
   confirmFn?: (pending: any) => Promise<boolean>;
 }

@@ -60,7 +60,7 @@ import { DirectoryPrompt } from './components/directory-prompt.js';
 import { SessionsMenu } from './components/sessions-menu.js';
 import { playSound } from './sound.js';
 import { writeHostClipboard } from './clipboard.js';
-import type { PendingConfirm } from '../agent/types.js';
+import type { AgentEvent, PendingConfirm } from '../agent/types.js';
 import {
   deleteStoredSession,
   loadSessions,
@@ -514,6 +514,15 @@ export function App(props: AppProps) {
                 ),
               );
             },
+            onAgentEvent: (event: AgentEvent) => {
+              setMessages(m =>
+                m.map(e =>
+                  e.id === pendingId
+                    ? { ...e, agentEvents: [...(e.agentEvents ?? []), event] }
+                    : e,
+                ),
+              );
+            },
             confirmFn: createConfirmFn(),
           })
         : await props.controller.send(chatHistory(), {
@@ -547,6 +556,7 @@ export function App(props: AppProps) {
                 ...(res.reasoningTokens !== undefined
                   ? { reasoningTokens: res.reasoningTokens }
                   : {}),
+                ...(res.agent ? { agent: res.agent } : {}),
                 tokens: res.inputTokens + res.outputTokens,
               }
             : e,

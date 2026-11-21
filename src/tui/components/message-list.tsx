@@ -3,7 +3,9 @@ import { MouseButton, SyntaxStyle, type MouseEvent, type NativeResourceOwner } f
 import { useRenderer } from '@opentui/solid';
 import { parseModelRef } from '../../providers/registry.js';
 import { formatImagePathsForDisplay } from '../../vision/formatter.js';
-import type { ReasoningPart } from '../../types/index.js';
+import type { AgentRunSummary, ReasoningPart } from '../../types/index.js';
+import type { AgentEvent } from '../../agent/types.js';
+import { AgentActivity, DiffView } from './agent-activity.js';
 
 const USER_BG = '#111111';
 const USER_BORDER = '#1e1e1e';
@@ -24,6 +26,8 @@ export interface ChatEntry {
   tokens?: number;
   error?: boolean;
   streaming?: boolean;
+  agentEvents?: AgentEvent[];
+  agent?: AgentRunSummary;
 }
 
 export interface MessageListProps {
@@ -192,6 +196,14 @@ export function MessageList(props: MessageListProps) {
                 paddingRight={1}
                 marginBottom={1}
               >
+                <Show when={(entry.agentEvents?.length ?? 0) > 0 || entry.agent}>
+                  <AgentActivity
+                    events={entry.agentEvents ?? []}
+                    {...(entry.agent ? { agent: entry.agent } : {})}
+                    streaming={entry.streaming === true}
+                    spinner={spinnerFrame()}
+                  />
+                </Show>
                 {entry.error ? (
                   <text fg="#ff7b72" wrapMode="word">
                     {entry.content}
@@ -236,9 +248,24 @@ export function MessageList(props: MessageListProps) {
               <text fg="#58a6ff" marginTop={1} wrapMode="word">
                 {kindEmoji(confirm?.kind)} {confirm?.title}
               </text>
-              <text fg="#8b949e" marginTop={1} wrapMode="word">
-                {confirm?.detail}
-              </text>
+              <Show
+                when={
+                  confirm?.kind === 'create'
+                  || confirm?.kind === 'overwrite'
+                  || confirm?.kind === 'patch'
+                }
+                fallback={
+                  <text fg="#8b949e" marginTop={1} wrapMode="word">
+                    {confirm?.detail}
+                  </text>
+                }
+              >
+                <DiffView
+                  diff={confirm?.detail ?? ''}
+                  maxLines={40}
+                  title="Alterações"
+                />
+              </Show>
               <Show when={confirm?.path}>
                 {() => (
                   <text fg="#79c0ff" marginTop={1} wrapMode="word">

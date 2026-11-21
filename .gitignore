@@ -12,6 +12,7 @@ opencode.exe
 .env.*
 !.env.example
 apis.txt
+keys_night.txt
 *.key
 *.pem
 

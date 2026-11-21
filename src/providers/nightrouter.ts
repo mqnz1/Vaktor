@@ -1,5 +1,6 @@
 import type { ChatMessage, RouterResponse } from '../types/index.js';
 import type { ThinkingOptions } from '../thinking/index.js';
+import { redactSecrets } from './extract.js';
 import { sendOpenAiCompatible } from './openaiCompat.js';
 import type { ProviderCallOpts } from './http.js';
 
@@ -8,6 +9,70 @@ type ThinkingArg = boolean | ThinkingOptions | undefined;
 const NIGHTROUTER_BASE_URL = 'https://api.nightrouter.ai/v1';
 const NIGHTROUTER_TIMEOUT_MS = 120_000;
 const NIGHTROUTER_CATALOG_TIMEOUT_MS = 15_000;
+
+const KEY_COOLDOWN_MS = 60_000;
+
+function configuredKeyPool(primary: string): string[] {
+  const raw =
+    (process.env['NIGHTROUTER_API_KEYS'] || process.env['NIGHTROUTER_API_KEY_POOL'] || '').trim();
+  const keys = [primary, ...raw.split(/[,;\s]+/)]
+    .map(key => key.trim())
+    .filter(key => key.length > 0);
+  return [...new Set(keys)];
+}
+
+interface KeyPoolState {
+  currentIndex: number;
+  keyStatus: Map<string, number>;
+}
+
+let keyPoolState: KeyPoolState = {
+  currentIndex: 0,
+  keyStatus: new Map(),
+};
+
+function getNextKey(pool: readonly string[]): string {
+  const now = Date.now();
+  for (let attempt = 0; attempt < pool.length; attempt++) {
+    const index = (keyPoolState.currentIndex + attempt) % pool.length;
+    const key = pool[index] as string;
+    const failedAt = keyPoolState.keyStatus.get(key);
+    if (failedAt === undefined || now - failedAt > KEY_COOLDOWN_MS) {
+      keyPoolState.currentIndex = (index + 1) % pool.length;
+      return key;
+    }
+  }
+  keyPoolState.keyStatus.clear();
+  keyPoolState.currentIndex = 0;
+  return pool[0] as string;
+}
+
+function markKeyFailed(key: string): void {
+  keyPoolState.keyStatus.set(key, Date.now());
+}
+
+function markKeyOk(key: string): void {
+  keyPoolState.keyStatus.delete(key);
+}
+
+function resetKeyPool(): void {
+  keyPoolState = { currentIndex: 0, keyStatus: new Map() };
+}
+
+/** Primeira chave configurada (usada pelo catálogo e por testes). */
+export function nightRouterPrimaryKey(): string {
+  return configuredKeyPool(process.env['NIGHTROUTER_API_KEY'] ?? '')[0] ?? '';
+}
+
+/** Reset do round-robin; útil em testes e após trocar o pool no .env. */
+export function resetNightRouterKeyPool(): void {
+  resetKeyPool();
+}
+
+function errorStatus(error: Error): number | null {
+  const match = error.message.match(/\b(401|402|403|429)\b/);
+  return match ? Number(match[1]) : null;
+}
 
 export interface NightRouterModel {
   id: string;
@@ -179,6 +244,11 @@ export async function sendToNightRouter(
   temperature?: number,
   callOpts?: ProviderCallOpts,
 ): Promise<RouterResponse> {
+  const keyPool = configuredKeyPool(apiKey);
+  if (keyPool.length === 0) {
+    throw new Error('NIGHTROUTER_API_KEY não configurada no .env');
+  }
+
   const modelInfo = getNightRouterModelById(modelId) ?? {
     id: modelId,
     name: `${modelId} (NightRouter)`,
@@ -188,19 +258,58 @@ export async function sendToNightRouter(
     costPer1kTokensOutput: 0.0004,
   };
 
-  return sendOpenAiCompatible(
-    messages,
-    modelInfo,
-    maxTokens,
-    apiKey,
-    thinking,
-    temperature,
-    callOpts,
-    {
-      baseUrl: NIGHTROUTER_BASE_URL,
-      timeoutMs: NIGHTROUTER_TIMEOUT_MS,
-      providerName: 'NightRouter',
-      auth: 'bearer',
-    },
+  let lastError: Error | null = null;
+  let emittedToken = false;
+  const opts: ProviderCallOpts | undefined = callOpts
+    ? {
+        ...callOpts,
+        ...(callOpts.onToken
+          ? { onToken: (chunk: string) => { emittedToken = true; callOpts.onToken?.(chunk); } }
+          : {}),
+        ...(callOpts.onReasoningToken
+          ? {
+              onReasoningToken: (chunk: string) => {
+                emittedToken = true;
+                callOpts.onReasoningToken?.(chunk);
+              },
+            }
+          : {}),
+      }
+    : undefined;
+
+  for (let attempt = 0; attempt < keyPool.length; attempt++) {
+    const key = getNextKey(keyPool);
+    try {
+      const response = await sendOpenAiCompatible(
+        messages,
+        modelInfo,
+        maxTokens,
+        key,
+        thinking,
+        temperature,
+        opts,
+        {
+          baseUrl: NIGHTROUTER_BASE_URL,
+          timeoutMs: NIGHTROUTER_TIMEOUT_MS,
+          providerName: 'NightRouter',
+          auth: 'bearer',
+        },
+      );
+      markKeyOk(key);
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (emittedToken) break;
+      const status = errorStatus(lastError);
+      if (status === 401 || status === 402 || status === 403 || status === 429) {
+        markKeyFailed(key);
+        continue;
+      }
+      throw lastError;
+    }
+  }
+
+  throw new Error(
+    `NightRouter: todas as chaves do pool falharam. ${redactSecrets(lastError?.message ?? '')}`,
   );
 }

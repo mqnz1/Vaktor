@@ -9,6 +9,7 @@ import { createSignal } from 'solid-js';
 import { testRender } from '@opentui/solid';
 import { MouseButtons, type TestRendererSetup } from '@opentui/core/testing';
 import type { AppMode, ChatMessage, RouterState } from '../types/index.js';
+import type { AgentEvent } from '../agent/types.js';
 import { listAllModels, type TuiController, type TuiModelEntry, type TuiSendResult } from './controller.js';
 import { PUTER_MODELS } from '../providers/puter.js';
 import { ownerOf, parseModelRef } from '../providers/registry.js';
@@ -92,6 +93,7 @@ class FakeController implements TuiController {
       signal?: AbortSignal;
       onToken?: (chunk: string) => void;
       onReasoningToken?: (chunk: string) => void;
+      onAgentEvent?: (event: AgentEvent) => void;
     },
   ): Promise<TuiSendResult> {
     this.sentHistory = history;
@@ -117,6 +119,63 @@ class FakeController implements TuiController {
       outputTokens: 2,
       estimatedCostUsd: 0,
       fromCache: false,
+    };
+  }
+
+  async complete(
+    history: ChatMessage[],
+    opts?: {
+      signal?: AbortSignal;
+      onToken?: (chunk: string) => void;
+      onAgentEvent?: (event: AgentEvent) => void;
+    },
+  ): Promise<TuiSendResult> {
+    this.sentHistory = history;
+    this.receivedSignal = opts?.signal ?? null;
+    const last = [...history].reverse().find(m => m.role === 'user')?.content ?? '';
+    opts?.onAgentEvent?.({ type: 'tool_start', name: 'read_file', args: { path: 'src/app.ts' } });
+    opts?.onAgentEvent?.({
+      type: 'tool_end',
+      name: 'read_file',
+      args: { path: 'src/app.ts' },
+      ok: true,
+      preview: '12 linhas',
+    });
+    opts?.onAgentEvent?.({ type: 'tool_start', name: 'apply_patch', args: { path: 'src/app.ts' } });
+    opts?.onAgentEvent?.({
+      type: 'tool_end',
+      name: 'apply_patch',
+      args: { path: 'src/app.ts' },
+      ok: true,
+      preview: '--- a/src/app.ts +++ b/src/app.ts +2 -1',
+    });
+    opts?.onAgentEvent?.({
+      type: 'verify_start',
+      command: 'npm run typecheck',
+    });
+    opts?.onAgentEvent?.({ type: 'verify_end', ok: true, output: 'ok' });
+    opts?.onToken?.(`agent:${last}`);
+    await new Promise(resolve => setTimeout(resolve, 20));
+    return {
+      text: `agent:${last}`,
+      model: this.state.activeModel,
+      inputTokens: 3,
+      outputTokens: 4,
+      estimatedCostUsd: 0,
+      fromCache: false,
+      agent: {
+        ok: true,
+        iterations: 1,
+        toolCalls: 2,
+        modifiedFiles: ['src/app.ts'],
+        commands: [],
+        tools: [
+          { name: 'read_file', args: { path: 'src/app.ts' }, ok: true },
+          { name: 'apply_patch', args: { path: 'src/app.ts' }, ok: true },
+        ],
+        verify: { ran: true, ok: true, attempts: 1, command: 'npm run typecheck' },
+        diff: '--- a/src/app.ts\n+++ b/src/app.ts\n@@ -1 +1 @@\n-velho\n+novo',
+      },
     };
   }
 
@@ -422,6 +481,29 @@ try {
   setup.mockInput.pressEnter();
   await expectFrame(setup, 'reasoning em streaming aparece', '_Thinking');
   await expectFrame(setup, 'reasoning final aparece', 'penso nativo');
+
+  // Modo code: atividade do agente, ferramentas e diff
+  await setup.mockInput.typeText('/mode code');
+  await settle(setup);
+  setup.mockInput.pressEnter();
+  await expectFrame(setup, 'modo code para o teste do agente', 'Modo:');
+  await setup.mockInput.typeText('agent activity');
+  await settle(setup, 10);
+  setup.mockInput.pressEnter();
+  await expectFrame(setup, 'atividade mostra Read', 'Read(src/app.ts)');
+  await expectFrame(setup, 'atividade mostra Patch', 'Patch(src/app.ts)');
+  await expectFrame(setup, 'atividade mostra Verify', 'Verify(npm run typecheck)');
+  await expectFrame(setup, 'atividade mostra diff', 'Diff');
+  await expectFrame(setup, 'resposta final do agente aparece', 'agent:agent activity');
+  check(
+    'resumo do agente aparece',
+    setup.captureCharFrame().includes('2 ferramentas') &&
+      setup.captureCharFrame().includes('verify ok'),
+  );
+  await setup.mockInput.typeText('/mode chat');
+  await settle(setup);
+  setup.mockInput.pressEnter();
+  await expectFrame(setup, 'modo chat restaurado', 'Modo: chat');
 
   // Cancelamento via ESC duas vezes durante a resposta
   controller.responseDelayMs = 500;
