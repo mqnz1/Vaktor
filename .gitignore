@@ -1,0 +1,28 @@
+# Dependencias e build
+node_modules/
+dist/
+opencode.exe
+
+# Estado local
+.local/
+*.db
+.vaktor/logs/
+.vaktor/memoria/sessions/*
+!.vaktor/memoria/sessions/.gitkeep
+.vaktor/memoria/runs/*
+!.vaktor/memoria/runs/.gitkeep
+.vaktor/memoria/lessons/*
+!.vaktor/memoria/lessons/.gitkeep
+
+# Credenciais — nunca versionar
+.env
+.env.*
+!.env.example
+apis.txt
+keys_night.txt
+*.key
+*.pem
+
+# Logs e temporarios
+*.log
+*.tmp

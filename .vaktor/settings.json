@@ -1,0 +1,28 @@
+{
+  "orchestrator": {
+    "maxConcurrency": 3,
+    "maxTasks": 8,
+    "contextBudgetTokens": 24000,
+    "sessionBudgetShare": 0.4,
+    "taskBudgetShare": 0.6,
+    "workerVerify": false,
+    "finalVerify": true,
+    "compactionModel": "opencode::deepseek-v4.1-flash",
+    "maxIterationsPerWorker": 18,
+    "maxToolCallsPerWorker": 40,
+    "maxIterationsFinalReview": 24,
+    "maxToolCallsFinalReview": 60
+  },
+  "permissions": {
+    "readOnlyTools": ["list_dir", "read_file", "search", "git_status", "git_diff"],
+    "writeTools": ["write_file", "apply_patch", "run_command"],
+    "forbiddenPaths": [".env", ".git/config", "*.pem", "*.key"],
+    "confirmDestructive": true
+  },
+  "memory": {
+    "projectInstructions": ["VAKTOR.md"],
+    "sessionsDir": ".vaktor/memoria/sessions",
+    "runsDir": ".vaktor/memoria/runs",
+    "lessonsDir": ".vaktor/memoria/lessons"
+  }
+}

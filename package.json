@@ -1,0 +1,79 @@
+{
+  "name": "vaktor",
+  "version": "2.0.28",
+  "description": "Vaktor — AI router com gestão inteligente de créditos e fallback automático de modelos",
+  "main": "dist/index.js",
+  "bin": {
+    "vaktor": "./dist/index.js"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=26.4.0"
+  },
+  "scripts": {
+    "build": "npm run build:node && npm run build:tui",
+    "build:node": "tsc -p tsconfig.json",
+    "build:tui": "babel src/tui --out-dir dist/tui --extensions .ts,.tsx --source-maps",
+    "prepare": "npm run build",
+    "start": "node --experimental-ffi dist/index.js",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tui.json",
+    "smoke:thinking": "tsx src/thinking/smoke.ts",
+    "smoke:tools": "tsx src/tools/smoke.ts",
+    "smoke:context": "tsx src/context/smoke.ts",
+    "smoke:memory": "tsx src/memory/smoke.ts",
+    "smoke:security": "tsx src/security/smoke.ts",
+    "smoke:jailbreak": "tsx src/jailbreak/smoke.ts",
+    "smoke:ui": "tsx src/ui/smoke.ts",
+    "smoke:mcp": "tsx src/mcp/smoke.ts",
+    "smoke:orchestrator": "tsx src/orchestrator/smoke.ts",
+    "smoke:agent": "tsx src/agent/smoke.ts",
+    "smoke:providers": "tsx src/providers/smoke.ts",
+    "smoke:combo": "tsx src/router/combo.smoke.ts",
+    "smoke:tui": "npm run build:node && npm run build:tui && node --experimental-ffi dist/tui/smoke.js",
+    "smoke:database": "tsx src/database/smoke.ts",
+    "smoke:vision": "tsx src/vision/smoke.ts",
+    "smoke:upload": "tsx src/vision/upload.smoke.ts",
+    "smoke:formatter": "tsx src/vision/formatter.smoke.ts",
+    "smoke": "npm run smoke:thinking && npm run smoke:tools && npm run smoke:context && npm run smoke:memory && npm run smoke:security && npm run smoke:jailbreak && npm run smoke:ui && npm run smoke:orchestrator && npm run smoke:mcp && npm run smoke:agent && npm run smoke:providers && npm run smoke:combo && npm run smoke:database && npm run smoke:vision && npm run smoke:upload && npm run smoke:formatter && npm run smoke:tui",
+    "export:dataset": "tsx scripts/export-dataset.ts"
+  },
+  "keywords": [
+    "ai",
+    "router",
+    "claude",
+    "openai",
+    "puter",
+    "tui"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@heyputer/puter.js": "^2.6.4",
+    "@opentui/core": "^0.7.0",
+    "@opentui/solid": "^0.7.0",
+    "blessed": "^0.1.81",
+    "chalk": "^5.3.0",
+    "dotenv": "^16.4.5",
+    "ink": "^4.4.1",
+    "ink-text-input": "^5.0.1",
+    "react": "^18.2.0",
+    "solid-js": "^1.9.12",
+    "sql.js": "^1.8.0",
+    "strip-ansi": "^7.2.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.29.7",
+    "@babel/core": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
+    "@types/blessed": "^0.1.27",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.2.0",
+    "@types/sql.js": "^1.4.4",
+    "babel-plugin-module-resolver": "^5.0.3",
+    "babel-preset-solid": "^1.9.12",
+    "tsx": "^4.15.6",
+    "typescript": "^5.4.5"
+  }
+}
